@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Obsonarium-backend/internal/handlers/auth"
 	jsonutils "Obsonarium-backend/internal/utils"
 	"flag"
 	"fmt"
@@ -51,6 +52,8 @@ func main() {
 
 	defer db.Close()
 
+	
+
 	app := &application{
 		config: cfg,
 		shared_deps: dependencies{
@@ -58,6 +61,8 @@ func main() {
 			JSONutils: jsonutils.NewJSONutils(),
 		},
 	}
+
+	auth.NewAuth(app.shared_deps.logger,app.config.Env)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.port),
