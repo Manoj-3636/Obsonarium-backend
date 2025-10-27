@@ -16,13 +16,11 @@ import (
 )
 
 
-type ProviderKeyType string
 const (
 	key="8e0f0a0e82854492d6a6b0f229dfd5f8e1ece132a97c122406d515900c8b32c5"
 	MaxAge = 60*5
 )
 
-const provideKey ProviderKeyType = "provide"
 
 func NewAuth(logger zerolog.Logger, env string){
 	err := godotenv.Load()
@@ -31,7 +29,9 @@ func NewAuth(logger zerolog.Logger, env string){
 	}
 
 	googleClientId := os.Getenv("GOOGLE_CLIENT_ID")
+	fmt.Println(googleClientId)
 	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+	fmt.Println(googleClientSecret)
 
 	store := sessions.NewCookieStore([]byte(key))
 	store.MaxAge(MaxAge)
@@ -51,7 +51,8 @@ func NewAuthCallback(logger zerolog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter,r *http.Request) {
 		provider := chi.URLParam(r,"provider")
 		
-		r = r.WithContext(context.WithValue(r.Context(),provideKey,provider))
+		//no-lint
+		r = r.WithContext(context.WithValue(r.Context(),"provider",provider))
 		
 		user,err := gothic.CompleteUserAuth(w,r)
 
@@ -76,7 +77,7 @@ func AuthProvider(w http.ResponseWriter, r *http.Request) {
 
     // Add the provider to the request context
     // FIX: Use r.Context() as the parent, not context.Background()
-    r = r.WithContext(context.WithValue(r.Context(), provideKey, provider))
+    r = r.WithContext(context.WithValue(r.Context(), "provider", provider))
 
     // The 'else' block from your original function is all you need.
     // This handles redirecting the user to Google.
