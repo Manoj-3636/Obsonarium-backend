@@ -2,7 +2,9 @@ package main
 
 import (
 	"Obsonarium-backend/internal/handlers/auth"
-	jsonutils "Obsonarium-backend/internal/utils"
+	"Obsonarium-backend/internal/repositories"
+	"Obsonarium-backend/internal/services"
+	"Obsonarium-backend/internal/utils/jsonutils"
 	"flag"
 	"fmt"
 	"net/http"
@@ -24,8 +26,9 @@ type config struct {
 }
 
 type dependencies struct {
-	logger zerolog.Logger
+	logger    zerolog.Logger
 	JSONutils jsonutils.JSONutils
+	AuthService services.AuthService
 }
 
 type application struct {
@@ -52,17 +55,16 @@ func main() {
 
 	defer db.Close()
 
-	
-
 	app := &application{
 		config: cfg,
 		shared_deps: dependencies{
-			logger: logger,
+			logger:    logger,
 			JSONutils: jsonutils.NewJSONutils(),
+			AuthService: *services.NewAuthService(repositories.NewUsersRepo(db)),
 		},
 	}
 
-	auth.NewAuth(app.shared_deps.logger,app.config.Env)
+	auth.NewAuth(app.shared_deps.logger, app.config.Env)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.port),
