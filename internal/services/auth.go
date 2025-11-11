@@ -32,7 +32,7 @@ func NewAuthService(usersRepo repositories.IUsersRepo) *AuthService {
 	}
 }
 
-func (authService *AuthService) CreateJWT(user *models.User) (string,error){
+func (authService *AuthService) CreateJWT(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"sub": user.Email,
 		"exp": time.Now().Add(7 * 24 * time.Hour).Unix(), // expires in 7 days
@@ -43,7 +43,7 @@ func (authService *AuthService) CreateJWT(user *models.User) (string,error){
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	self_token, err := token.SignedString([]byte(authService.selfSigningKey))
 
-		if err != nil {
+	if err != nil {
 		return "", fmt.Errorf("%w,%w", ErrSelfTokenCreate, err)
 	}
 
@@ -88,19 +88,24 @@ func (authService *AuthService) ClaimsToUser(claims *jwt.MapClaims) (*models.Use
 	return user, fmt.Errorf("%w:%w", ErrClaimsParse, err)
 }
 
-func (authService *AuthService) FindOrCreateUser(email, name, pfp_url string) (*models.User, error) {
-    // For now, it just calls the repository.
-    // In the future, you could add logic here like:
-    // - Validating the email format
-    // - Sanitizing the 'name' input
-    // - Logging the creation of a new user
-    
-    user, err := authService.usersRepo.CreateOrGet(email, name, pfp_url)
-    
-    if err != nil {
-        // You can also wrap the error in a service-level error
-        return nil, fmt.Errorf("service error finding or creating user: %w", err)
-    }
+func (authService *AuthService) UpsertUser(email, name, pfp_url string) error {
+	// For now, it just calls the repository.
+	// In the future, you could add logic here like:
+	// - Validating the email format
+	// - Sanitizing the 'name' input
+	// - Logging the creation of a new user
 
-    return user, nil
+	recievedUser := models.User{
+		Email:   email,
+		Name:    name,
+		Pfp_url: pfp_url,
+	}
+	err := authService.usersRepo.UpsertUser(&recievedUser)
+
+	if err != nil {
+		// You can also wrap the error in a service-level error
+		return fmt.Errorf("service error finding or creating user: %w", err)
+	}
+
+	return nil
 }
