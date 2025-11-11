@@ -1,9 +1,9 @@
 package auth
 
 import (
-	"Obsonarium-backend/internal/models"
 	"Obsonarium-backend/internal/services"
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -29,9 +29,9 @@ func NewAuth(logger zerolog.Logger, env string) {
 	}
 
 	googleClientId := os.Getenv("GOOGLE_CLIENT_ID")
-	// fmt.Println(googleClientId)
+	fmt.Println(googleClientId)
 	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
-	// fmt.Println(googleClientSecret)
+	fmt.Println(googleClientSecret)
 
 	store := sessions.NewCookieStore([]byte(key))
 	store.MaxAge(MaxAge)
@@ -43,7 +43,7 @@ func NewAuth(logger zerolog.Logger, env string) {
 
 	goth.UseProviders(
 		// TOOD don't hardocode
-		google.New(googleClientId, googleClientSecret, "http://localhost:8000/auth/google/callback", "email", "profile"),
+		google.New(googleClientId, googleClientSecret, "http://localhost:8000/auth/google/callback"),
 	)
 }
 
@@ -59,22 +59,14 @@ func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService) h
 			return
 		}
 
-		receivedUser := models.User{
-			Email:gothUser.Email,
-			Name: gothUser.Name,
-			Pfp_url: gothUser.AvatarURL,
-		}
-
-		err = authService.UpsertUser(gothUser.Email, gothUser.Name, gothUser.AvatarURL)
+		dbUser, err := authService.FindOrCreateUser(gothUser.Email, gothUser.Name, gothUser.AvatarURL)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to find or create user")
 			http.Error(w, "Failed to process user", http.StatusInternalServerError)
 			return
 		}
 
-
-
-		jwtString, err := authService.CreateJWT(&receivedUser)
+		jwtString, err := authService.CreateJWT(dbUser)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to create JWT")
 			http.Error(w, "Failed to create session", http.StatusInternalServerError)
