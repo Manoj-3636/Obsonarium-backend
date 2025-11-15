@@ -4,6 +4,7 @@ import (
 	"Obsonarium-backend/internal/handlers/auth"
 	"Obsonarium-backend/internal/handlers/healthcheck"
 	"Obsonarium-backend/internal/handlers/retailer_products"
+	"Obsonarium-backend/internal/handlers/retailers"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -19,5 +20,6 @@ func (app *application) newRouter() *chi.Mux {
 	r.Get("/api/logout/{provider}", auth.AuthLogout)
 	r.Get("/api/shop", retailer_products.GetProducts(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/shop/{id}", retailer_products.GetProduct(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
+	r.Get("/api/retailers/{id}", retailers.GetRetailer(&app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
 	return r
 }
