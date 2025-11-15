@@ -19,7 +19,7 @@ import (
 
 const (
 	key    = "8e0f0a0e82854492d6a6b0f229dfd5f8e1ece132a97c122406d515900c8b32c5"
-	MaxAge = 60 * 5
+	MaxAge = 60 * 60
 )
 
 func NewAuth(logger zerolog.Logger, env string) {
@@ -36,14 +36,20 @@ func NewAuth(logger zerolog.Logger, env string) {
 	store := sessions.NewCookieStore([]byte(key))
 	store.MaxAge(MaxAge)
 
-	store.Options.Path = "/"
-	store.Options.HttpOnly = true
-	store.Options.Secure = (env == "prod")
+	store.Options = &sessions.Options{
+		Path:     "/",
+		MaxAge:   MaxAge,
+		HttpOnly: true,
+		Secure:   false,                // because you're on localhost
+		SameSite: http.SameSiteLaxMode, // <--- THIS FIXES THE SESSION ISSUE
+	}
+
+	//I dont know how the fuck this works please don't change it
 	gothic.Store = store
 
 	goth.UseProviders(
 		// TOOD don't hardocode
-		google.New(googleClientId, googleClientSecret, "http://localhost:8000/auth/google/callback", "email", "profile"),
+		google.New(googleClientId, googleClientSecret, "http://localhost:5173/api/auth/google/callback", "email", "profile"),
 	)
 }
 
@@ -60,8 +66,8 @@ func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService) h
 		}
 
 		receivedUser := models.User{
-			Email:gothUser.Email,
-			Name: gothUser.Name,
+			Email:   gothUser.Email,
+			Name:    gothUser.Name,
 			Pfp_url: gothUser.AvatarURL,
 		}
 
@@ -71,8 +77,6 @@ func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService) h
 			http.Error(w, "Failed to process user", http.StatusInternalServerError)
 			return
 		}
-
-
 
 		jwtString, err := authService.CreateJWT(&receivedUser)
 		if err != nil {
