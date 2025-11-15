@@ -22,6 +22,11 @@ const (
 	MaxAge = 60 * 60
 )
 
+// ContextKey is a type for context keys to avoid collisions
+type ContextKey string
+
+const UserEmailKey ContextKey = "user_email"
+
 func NewAuth(logger zerolog.Logger, env string) {
 	err := godotenv.Load()
 	if err != nil {
@@ -115,4 +120,52 @@ func AuthProvider(w http.ResponseWriter, r *http.Request) {
 	// The 'else' block from your original function is all you need.
 	// This handles redirecting the user to Google.
 	gothic.BeginAuthHandler(w, r)
+}
+
+// RequireAuth is a middleware that checks authentication status and adds user email to context
+// If authentication fails, the request continues but without email in context
+func RequireAuth(authService *services.AuthService, logger zerolog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Extract JWT token from cookie
+			cookie, err := r.Cookie("jwt")
+			if err != nil {
+				// No cookie found, continue without authentication
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Verify the token
+			claims, err := authService.VerifySelfToken(cookie.Value)
+			if err != nil {
+				// Token invalid or expired, continue without authentication
+				logger.Debug().Err(err).Msg("JWT verification failed")
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Extract email from claims
+			email, ok := (*claims)["sub"].(string)
+			if !ok || email == "" {
+				// Invalid claims, continue without authentication
+				logger.Debug().Msg("Invalid email in JWT claims")
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Add email to request context
+			ctx := context.WithValue(r.Context(), UserEmailKey, email)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// GetUserEmailFromContext extracts the user email from the request context
+// Returns empty string if not found
+func GetUserEmailFromContext(r *http.Request) string {
+	email, ok := r.Context().Value(UserEmailKey).(string)
+	if !ok {
+		return ""
+	}
+	return email
 }
