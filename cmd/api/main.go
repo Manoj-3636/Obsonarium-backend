@@ -29,6 +29,7 @@ type dependencies struct {
 	logger    zerolog.Logger
 	JSONutils jsonutils.JSONutils
 	AuthService services.AuthService
+	RetailerProductsService services.RetailerProductsService
 }
 
 type application struct {
@@ -61,6 +62,7 @@ func main() {
 			logger:    logger,
 			JSONutils: jsonutils.NewJSONutils(),
 			AuthService: *services.NewAuthService(repositories.NewUsersRepo(db)),
+			RetailerProductsService: *services.NewRetailerProductsService(repositories.NewRetailerProductsRepo(db)),
 		},
 	}
 
