@@ -23,7 +23,7 @@ func NewRetailerProductsRepo(db *sql.DB) *RetailerProductsRepo {
 
 func (repo *RetailerProductsRepo) GetProducts() ([]models.RetailerProduct, error) {
 	query := `
-		SELECT id, retailer_id, name, price, stock_qty, image_url
+		SELECT id, retailer_id, name, price, stock_qty, image_url, description
 		FROM retailer_products
 		ORDER BY id`
 
@@ -44,6 +44,7 @@ func (repo *RetailerProductsRepo) GetProducts() ([]models.RetailerProduct, error
 			&product.Price,
 			&product.Stock_qty,
 			&product.Image_url,
+			&product.Description,
 		)
 		if err != nil {
 			return nil, err
@@ -60,7 +61,7 @@ func (repo *RetailerProductsRepo) GetProducts() ([]models.RetailerProduct, error
 
 func (repo *RetailerProductsRepo) GetProduct(id int) (*models.RetailerProduct, error) {
 	query := `
-		SELECT id, retailer_id, name, price, stock_qty, image_url
+		SELECT id, retailer_id, name, price, stock_qty, image_url, description
 		FROM retailer_products
 		WHERE id = $1`
 
@@ -75,6 +76,7 @@ func (repo *RetailerProductsRepo) GetProduct(id int) (*models.RetailerProduct, e
 		&product.Price,
 		&product.Stock_qty,
 		&product.Image_url,
+		&product.Description,
 	)
 
 	if err != nil {

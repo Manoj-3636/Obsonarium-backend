@@ -7,4 +7,5 @@ type RetailerProduct struct {
 	Price       float64
 	Stock_qty   int
 	Image_url   string
+	Description string
 }
