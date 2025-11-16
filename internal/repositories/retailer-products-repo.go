@@ -10,6 +10,7 @@ var ErrProductNotFound = errors.New("product not found")
 
 type IRetailerProductsRepo interface {
 	GetProducts() ([]models.RetailerProduct, error)
+	SearchProducts(keyword string) ([]models.RetailerProduct, error)
 	GetProduct(id int) (*models.RetailerProduct, error)
 }
 
@@ -25,7 +26,9 @@ func (repo *RetailerProductsRepo) GetProducts() ([]models.RetailerProduct, error
 	query := `
 		SELECT id, retailer_id, name, price, stock_qty, image_url, description
 		FROM retailer_products
-		ORDER BY id`
+		ORDER BY updated_at
+		LIMIT 10
+	`
 
 	rows, err := repo.DB.Query(query)
 	if err != nil {
@@ -50,6 +53,49 @@ func (repo *RetailerProductsRepo) GetProducts() ([]models.RetailerProduct, error
 			return nil, err
 		}
 		products = append(products, product)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return products, nil
+}
+
+func (repo *RetailerProductsRepo) SearchProducts(keyword string) ([]models.RetailerProduct, error) {
+	query := `
+        SELECT id, retailer_id, name, price, stock_qty, image_url, description
+        FROM retailer_products
+        WHERE
+            to_tsvector('simple', name || ' ' || coalesce(description, ''))
+            @@ plainto_tsquery('simple', $1)
+        ORDER BY updated_at DESC
+        LIMIT 50;
+    `
+
+	rows, err := repo.DB.Query(query, keyword)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []models.RetailerProduct
+
+	for rows.Next() {
+		var p models.RetailerProduct
+		err := rows.Scan(
+			&p.Id,
+			&p.Retailer_id,
+			&p.Name,
+			&p.Price,
+			&p.Stock_qty,
+			&p.Image_url,
+			&p.Description,
+		)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, p)
 	}
 
 	if err = rows.Err(); err != nil {

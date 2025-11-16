@@ -16,14 +16,16 @@ func NewRetailerProductsService(productsRepo repositories.IRetailerProductsRepo)
 	}
 }
 
-func (s *RetailerProductsService) GetProducts() ([]models.RetailerProduct, error) {
-	products, err := s.productsRepo.GetProducts()
-	if err != nil {
-		return nil, fmt.Errorf("service error fetching products: %w", err)
-	}
+func (s *RetailerProductsService) GetProducts(q string) ([]models.RetailerProduct, error) {
+    if q != "" {
+        // full-text search
+        return s.productsRepo.SearchProducts(q)
+    }
 
-	return products, nil
+    // default 10 products
+    return s.productsRepo.GetProducts()
 }
+
 
 func (s *RetailerProductsService) GetProduct(id int) (*models.RetailerProduct, error) {
 	product, err := s.productsRepo.GetProduct(id)

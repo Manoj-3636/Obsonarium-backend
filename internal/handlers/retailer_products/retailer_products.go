@@ -13,7 +13,8 @@ import (
 
 func GetProducts(productsService *services.RetailerProductsService, writeJSON jsonutils.JSONwriter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		products, err := productsService.GetProducts()
+		q := r.URL.Query().Get("q")
+		products, err := productsService.GetProducts(q)
 		if err != nil {
 			writeJSON(w, jsonutils.Envelope{"error": "Failed to fetch products"}, http.StatusInternalServerError, nil)
 			return
