@@ -27,7 +27,7 @@ func (repo *RetailerProductsRepo) GetProducts() ([]models.RetailerProduct, error
 		SELECT id, retailer_id, name, price, stock_qty, image_url, description
 		FROM retailer_products
 		ORDER BY updated_at DESC
-		LIMIT 10
+		LIMIT 9
 	`
 
 	rows, err := repo.DB.Query(query)

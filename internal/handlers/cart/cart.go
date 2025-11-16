@@ -54,18 +54,13 @@ func AddCartItem(cartService *services.CartService, writeJSON jsonutils.JSONwrit
 			return
 		}
 
-		if requestBody.Quantity <= 0 {
-			writeJSON(w, jsonutils.Envelope{"error": "Quantity must be greater than 0"}, http.StatusBadRequest, nil)
-			return
-		}
-
-		err = cartService.AddCartItem(email, requestBody.ProductID, requestBody.Quantity)
+		newQty, err := cartService.AddCartItem(email, requestBody.ProductID, requestBody.Quantity)
 		if err != nil {
 			writeJSON(w, jsonutils.Envelope{"error": "Failed to add item to cart"}, http.StatusInternalServerError, nil)
 			return
 		}
 
-		writeJSON(w, jsonutils.Envelope{"message": "Item added to cart"}, http.StatusOK, nil)
+		writeJSON(w, jsonutils.Envelope{"quantity": newQty}, http.StatusOK, nil)
 	}
 }
 

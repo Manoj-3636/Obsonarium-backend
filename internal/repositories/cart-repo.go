@@ -10,8 +10,9 @@ var ErrCartItemNotFound = errors.New("cart item not found")
 
 type ICartRepo interface {
 	GetCartItemsByUserID(userID int) ([]models.CartItem, error)
-	AddCartItem(userID int, productID int, quantity int) error
+	AddCartItem(userID int, productID int, quantity int) (int, error)
 	RemoveCartItem(userID int, productID int) error
+	DecreaseCartItem(userID int, productID int) (int, error)
 }
 
 type CartRepo struct {
@@ -58,15 +59,52 @@ func (repo *CartRepo) GetCartItemsByUserID(userID int) ([]models.CartItem, error
 	return cartItems, nil
 }
 
-func (repo *CartRepo) AddCartItem(userID int, productID int, quantity int) error {
+func (repo *CartRepo) AddCartItem(userID int, productID int, quantity int) (int, error) {
 	query := `
 		INSERT INTO cart_items (user_id, product_id, quantity)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (user_id, product_id) DO UPDATE
-		SET quantity = cart_items.quantity + EXCLUDED.quantity`
+		SET quantity = cart_items.quantity + EXCLUDED.quantity
+		RETURNING quantity
+		`
 
-	_, err := repo.DB.Exec(query, userID, productID, quantity)
-	return err
+	var newQuantity int
+	err := repo.DB.QueryRow(query, userID, productID, quantity).Scan(&newQuantity)
+
+	return newQuantity, err
+}
+
+func (repo *CartRepo) DecreaseCartItem(userID int, productID int) (int, error) {
+	// First decrease quantity
+	query := `
+		UPDATE cart_items
+		SET quantity = quantity - 1
+		WHERE user_id = $1 AND product_id = $2
+		RETURNING quantity
+	`
+
+	var newQty int
+	err := repo.DB.QueryRow(query, userID, productID).Scan(&newQty)
+
+	if err == sql.ErrNoRows {
+		// no cart item found
+		return 0, ErrCartItemNotFound
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	// If quantity is now 0 → delete the row
+	if newQty <= 0 {
+		_, err := repo.DB.Exec(
+			`DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2`,
+			userID, productID,
+		)
+		return newQty, err
+	}
+
+	return newQty, nil
 }
 
 func (repo *CartRepo) RemoveCartItem(userID int, productID int) error {
