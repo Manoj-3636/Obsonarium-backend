@@ -13,6 +13,7 @@ type ICartRepo interface {
 	AddCartItem(userID int, productID int, quantity int) (int, error)
 	RemoveCartItem(userID int, productID int) error
 	DecreaseCartItem(userID int, productID int) (int, error)
+	GetCartNumber(userID int) (int, error)
 }
 
 type CartRepo struct {
@@ -127,4 +128,21 @@ func (repo *CartRepo) RemoveCartItem(userID int, productID int) error {
 	}
 
 	return nil
+}
+
+func (repo *CartRepo) GetCartNumber(userID int) (int, error) {
+	query := `
+		SELECT COALESCE(SUM(quantity),0)
+		FROM cart_items
+		WHERE user_id = $1
+	`
+
+	var count int
+	err := repo.DB.QueryRow(query, userID).Scan(&count)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

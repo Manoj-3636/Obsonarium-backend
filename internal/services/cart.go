@@ -69,3 +69,17 @@ func (s *CartService) RemoveCartItem(email string, productID int) error {
 
 	return nil
 }
+
+func (s *CartService) GetCartNumberByEmail(email string) (int, error) {
+	user, err := s.usersRepo.GetUserByEmail(email)
+	if err != nil {
+		return 0, fmt.Errorf("service error fetching user: %w", err)
+	}
+
+	count, err := s.cartRepo.GetCartNumber(user.Id)
+	if err != nil {
+		return 0, fmt.Errorf("service error fetching cart number: %w", err)
+	}
+
+	return count, nil
+}

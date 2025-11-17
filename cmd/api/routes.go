@@ -27,6 +27,7 @@ func (app *application) newRouter() *chi.Mux {
 	r.Route("/api/cart", func(r chi.Router) {
 		r.Use(auth.RequireAuth(&app.shared_deps.AuthService, app.shared_deps.logger))
 		r.Get("/", cart.GetCart(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
+		r.Get("/number", cart.GetCartNumber(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
 		r.Post("/", cart.AddCartItem(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 		r.Delete("/{product_id}", cart.RemoveCartItem(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
 	})

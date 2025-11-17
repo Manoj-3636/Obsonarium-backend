@@ -92,3 +92,21 @@ func RemoveCartItem(cartService *services.CartService, writeJSON jsonutils.JSONw
 		writeJSON(w, jsonutils.Envelope{"message": "Item removed from cart"}, http.StatusOK, nil)
 	}
 }
+
+func GetCartNumber(cartService *services.CartService, writeJSON jsonutils.JSONwriter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		email := auth.GetUserEmailFromContext(r)
+		if email == "" {
+			writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+			return
+		}
+
+		count, err := cartService.GetCartNumberByEmail(email)
+		if err != nil {
+			writeJSON(w, jsonutils.Envelope{"error": "Failed to fetch cart number"}, http.StatusInternalServerError, nil)
+			return
+		}
+
+		writeJSON(w, jsonutils.Envelope{"count": count}, http.StatusOK, nil)
+	}
+}
