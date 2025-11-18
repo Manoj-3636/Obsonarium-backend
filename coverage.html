@@ -1,0 +1,1923 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>api: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">Obsonarium-backend/cmd/api/database.go (0.0%)</option>
+				
+				<option value="file1">Obsonarium-backend/cmd/api/main.go (0.0%)</option>
+				
+				<option value="file2">Obsonarium-backend/cmd/api/routes.go (0.0%)</option>
+				
+				<option value="file3">Obsonarium-backend/internal/handlers/auth/auth.go (0.0%)</option>
+				
+				<option value="file4">Obsonarium-backend/internal/handlers/cart/cart.go (60.7%)</option>
+				
+				<option value="file5">Obsonarium-backend/internal/handlers/healthcheck/healthcheck.go (0.0%)</option>
+				
+				<option value="file6">Obsonarium-backend/internal/handlers/retailer_products/retailer_products.go (90.5%)</option>
+				
+				<option value="file7">Obsonarium-backend/internal/handlers/retailers/retailers.go (0.0%)</option>
+				
+				<option value="file8">Obsonarium-backend/internal/handlers/user_addresses/user_addresses.go (0.0%)</option>
+				
+				<option value="file9">Obsonarium-backend/internal/repositories/cart-repo.go (80.9%)</option>
+				
+				<option value="file10">Obsonarium-backend/internal/repositories/retailer-products-repo.go (82.5%)</option>
+				
+				<option value="file11">Obsonarium-backend/internal/repositories/retailers-repo.go (90.0%)</option>
+				
+				<option value="file12">Obsonarium-backend/internal/repositories/user-addresses-repo.go (82.8%)</option>
+				
+				<option value="file13">Obsonarium-backend/internal/repositories/users-repo.go (92.3%)</option>
+				
+				<option value="file14">Obsonarium-backend/internal/services/auth.go (69.0%)</option>
+				
+				<option value="file15">Obsonarium-backend/internal/services/cart.go (80.0%)</option>
+				
+				<option value="file16">Obsonarium-backend/internal/services/retailer-products.go (90.0%)</option>
+				
+				<option value="file17">Obsonarium-backend/internal/services/retailers.go (85.7%)</option>
+				
+				<option value="file18">Obsonarium-backend/internal/services/user-addresses.go (80.0%)</option>
+				
+				<option value="file19">Obsonarium-backend/internal/utils/jsonutils/jsonutils.go (73.1%)</option>
+				
+				<option value="file20">Obsonarium-backend/internal/utils/responseutils/errors.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "context"
+        "database/sql"
+        "log"
+        "time"
+
+        _ "github.com/lib/pq"
+)
+
+func openDB(cfg config) (*sql.DB, error) <span class="cov0" title="0">{
+        db, err := sql.Open("postgres", cfg.DB.dsn)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">db.SetMaxOpenConns(cfg.DB.maxOpenConns)
+        db.SetMaxIdleConns(cfg.DB.maxIdleConns)
+
+        duration, err := time.ParseDuration(cfg.DB.maxIdleTime)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+
+        <span class="cov0" title="0">db.SetConnMaxIdleTime(duration)
+
+        ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+
+        defer cancel()
+        err = db.PingContext(ctx)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return db, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import (
+        "Obsonarium-backend/internal/handlers/auth"
+        "Obsonarium-backend/internal/repositories"
+        "Obsonarium-backend/internal/services"
+        "Obsonarium-backend/internal/utils/jsonutils"
+        "flag"
+        "fmt"
+        "net/http"
+        "os"
+        "time"
+
+        "github.com/rs/zerolog"
+)
+
+type config struct {
+        port int
+        Env  string
+        DB   struct {
+                dsn          string
+                maxOpenConns int
+                maxIdleConns int
+                maxIdleTime  string
+        }
+}
+
+type dependencies struct {
+        logger                  zerolog.Logger
+        JSONutils               jsonutils.JSONutils
+        AuthService             services.AuthService
+        RetailerProductsService services.RetailerProductsService
+        RetailersService        services.RetailersService
+        CartService             services.CartService
+        UserAddressesService    services.UserAddressesService
+}
+
+type application struct {
+        config      config
+        shared_deps dependencies
+}
+
+func main() <span class="cov0" title="0">{
+        var cfg config
+        flag.IntVar(&amp;cfg.port, "port", 8000, "API server port")
+        flag.StringVar(&amp;cfg.Env, "env", "prod", "Environment (development|staging|production)")
+        flag.StringVar(&amp;cfg.DB.dsn, "db-dsn", os.Getenv("OBSONARIUM_DB_DSN"), "Database connection string")
+
+        flag.IntVar(&amp;cfg.DB.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
+        flag.IntVar(&amp;cfg.DB.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
+        flag.StringVar(&amp;cfg.DB.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
+        flag.Parse()
+        logger := zerolog.New(os.Stdout).Level(zerolog.InfoLevel).With().Timestamp().Logger()
+
+        db, err := openDB(cfg)
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Fatal().Msg(err.Error())
+        }</span>
+
+        <span class="cov0" title="0">defer db.Close()
+
+        app := &amp;application{
+                config: cfg,
+                shared_deps: dependencies{
+                        logger:                  logger,
+                        JSONutils:               jsonutils.NewJSONutils(),
+                        AuthService:             *services.NewAuthService(repositories.NewUsersRepo(db)),
+                        RetailerProductsService: *services.NewRetailerProductsService(repositories.NewRetailerProductsRepo(db)),
+                        RetailersService:        *services.NewRetailersService(repositories.NewRetailersRepo(db)),
+                        CartService:             *services.NewCartService(repositories.NewCartRepo(db), repositories.NewUsersRepo(db)),
+                        UserAddressesService:    *services.NewUserAddressesService(repositories.NewUserAddressesRepo(db), repositories.NewUsersRepo(db)),
+                },
+        }
+
+        auth.NewAuth(app.shared_deps.logger, app.config.Env)
+
+        srv := &amp;http.Server{
+                Addr:         fmt.Sprintf(":%d", cfg.port),
+                Handler:      app.newRouter(),
+                IdleTimeout:  time.Minute,
+                ReadTimeout:  10 * time.Second,
+                WriteTimeout: 30 * time.Second,
+        }
+
+        logger.Info().Int("Port", cfg.port).Str("Environment", cfg.Env).Msg("Started Server")
+        err = srv.ListenAndServe()
+
+        logger.Fatal().Msg(err.Error())</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package main
+
+import (
+        "Obsonarium-backend/internal/handlers/auth"
+        "Obsonarium-backend/internal/handlers/cart"
+        "Obsonarium-backend/internal/handlers/healthcheck"
+        "Obsonarium-backend/internal/handlers/retailer_products"
+        "Obsonarium-backend/internal/handlers/retailers"
+        "Obsonarium-backend/internal/handlers/user_addresses"
+
+        "github.com/go-chi/chi"
+        "github.com/go-chi/chi/middleware"
+)
+
+func (app *application) newRouter() *chi.Mux <span class="cov0" title="0">{
+        r := chi.NewRouter()
+        r.Use(middleware.Logger)
+
+        r.Get("/api/healthcheck", healthcheck.NewHealthCheckHandler(app.config.Env, app.shared_deps.JSONutils.Writer))
+        r.Get("/api/auth/{provider}/callback", auth.NewAuthCallback(app.shared_deps.logger, &amp;app.shared_deps.AuthService))
+        r.Get("/api/auth/{provider}", auth.AuthProvider)
+        r.Get("/api/logout/{provider}", auth.AuthLogout)
+        r.Get("/api/shop", retailer_products.GetProducts(&amp;app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
+        r.Get("/api/shop/{id}", retailer_products.GetProduct(&amp;app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
+        r.Get("/api/retailers/{id}", retailers.GetRetailer(&amp;app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
+
+        // Cart routes with authentication middleware
+        r.Route("/api/cart", func(r chi.Router) </span><span class="cov0" title="0">{
+                r.Use(auth.RequireAuth(&amp;app.shared_deps.AuthService, app.shared_deps.logger))
+                r.Get("/", cart.GetCart(&amp;app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
+                r.Get("/number", cart.GetCartNumber(&amp;app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
+                r.Post("/", cart.AddCartItem(&amp;app.shared_deps.CartService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+                r.Delete("/{product_id}", cart.RemoveCartItem(&amp;app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
+        }</span>)
+
+        // User addresses routes with authentication middleware
+        <span class="cov0" title="0">r.Route("/api/addresses", func(r chi.Router) </span><span class="cov0" title="0">{
+                r.Use(auth.RequireAuth(&amp;app.shared_deps.AuthService, app.shared_deps.logger))
+                r.Get("/", user_addresses.GetAddresses(&amp;app.shared_deps.UserAddressesService, app.shared_deps.JSONutils.Writer))
+                r.Post("/", user_addresses.AddAddress(&amp;app.shared_deps.UserAddressesService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+                r.Delete("/{id}", user_addresses.RemoveAddress(&amp;app.shared_deps.UserAddressesService, app.shared_deps.JSONutils.Writer))
+        }</span>)
+
+        <span class="cov0" title="0">return r</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package auth
+
+import (
+        "Obsonarium-backend/internal/models"
+        "Obsonarium-backend/internal/services"
+        "context"
+        "net/http"
+        "os"
+        "time"
+
+        "github.com/go-chi/chi"
+        "github.com/gorilla/sessions"
+        "github.com/joho/godotenv"
+        "github.com/markbates/goth"
+        "github.com/markbates/goth/gothic"
+        "github.com/markbates/goth/providers/google"
+        "github.com/rs/zerolog"
+)
+
+const (
+        key    = "8e0f0a0e82854492d6a6b0f229dfd5f8e1ece132a97c122406d515900c8b32c5"
+        MaxAge = 60 * 60
+)
+
+// ContextKey is a type for context keys to avoid collisions
+type ContextKey string
+
+const UserEmailKey ContextKey = "user_email"
+
+func NewAuth(logger zerolog.Logger, env string) <span class="cov0" title="0">{
+        err := godotenv.Load()
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Error().Err(err)
+        }</span>
+
+        <span class="cov0" title="0">googleClientId := os.Getenv("GOOGLE_CLIENT_ID")
+        // fmt.Println(googleClientId)
+        googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+        // fmt.Println(googleClientSecret)
+
+        store := sessions.NewCookieStore([]byte(key))
+        store.MaxAge(MaxAge)
+
+        store.Options = &amp;sessions.Options{
+                Path:     "/",
+                MaxAge:   MaxAge,
+                HttpOnly: true,
+                Secure:   false,                // because you're on localhost
+                SameSite: http.SameSiteLaxMode, // &lt;--- THIS FIXES THE SESSION ISSUE
+        }
+
+        //I dont know how the fuck this works please don't change it
+        gothic.Store = store
+
+        goth.UseProviders(
+                // TOOD don't hardocode
+                google.New(googleClientId, googleClientSecret, "http://localhost:5173/api/auth/google/callback", "email", "profile"),
+        )</span>
+}
+
+func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService) http.HandlerFunc <span class="cov0" title="0">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov0" title="0">{
+                provider := chi.URLParam(r, "provider")
+                r = r.WithContext(context.WithValue(r.Context(), "provider", provider))
+
+                gothUser, err := gothic.CompleteUserAuth(w, r)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Error().Err(err).Msg("Failed to complete Gothic auth")
+                        http.Error(w, "Authentication failed", http.StatusInternalServerError)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">receivedUser := models.User{
+                        Email:   gothUser.Email,
+                        Name:    gothUser.Name,
+                        Pfp_url: gothUser.AvatarURL,
+                }
+
+                err = authService.UpsertUser(gothUser.Email, gothUser.Name, gothUser.AvatarURL)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Error().Err(err).Msg("Failed to find or create user")
+                        http.Error(w, "Failed to process user", http.StatusInternalServerError)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">jwtString, err := authService.CreateJWT(&amp;receivedUser)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Error().Err(err).Msg("Failed to create JWT")
+                        http.Error(w, "Failed to create session", http.StatusInternalServerError)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">cookie := &amp;http.Cookie{
+                        Name:     "jwt",
+                        Value:    jwtString,
+                        Expires:  time.Now().Add(7 * 24 * time.Hour),
+                        Path:     "/",
+                        HttpOnly: true,
+                        Secure:   false,
+                        SameSite: http.SameSiteLaxMode,
+                }
+                http.SetCookie(w, cookie)
+
+                http.Redirect(w, r, "http://localhost:5173", http.StatusFound)</span>
+        }
+}
+
+func AuthLogout(res http.ResponseWriter, req *http.Request) <span class="cov0" title="0">{
+        gothic.Logout(res, req)
+        res.Header().Set("Location", "/")
+        res.WriteHeader(http.StatusTemporaryRedirect)
+}</span>
+
+func AuthProvider(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        provider := chi.URLParam(r, "provider")
+
+        // Add the provider to the request context
+        r = r.WithContext(context.WithValue(r.Context(), "provider", provider))
+
+        // The 'else' block from your original function is all you need.
+        // This handles redirecting the user to Google.
+        gothic.BeginAuthHandler(w, r)
+}</span>
+
+// RequireAuth is a middleware that checks authentication status and adds user email to context
+// If authentication fails, the request continues but without email in context
+func RequireAuth(authService *services.AuthService, logger zerolog.Logger) func(http.Handler) http.Handler <span class="cov0" title="0">{
+        return func(next http.Handler) http.Handler </span><span class="cov0" title="0">{
+                return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) </span><span class="cov0" title="0">{
+                        // Extract JWT token from cookie
+                        cookie, err := r.Cookie("jwt")
+                        if err != nil </span><span class="cov0" title="0">{
+                                // No cookie found, continue without authentication
+                                next.ServeHTTP(w, r)
+                                return
+                        }</span>
+
+                        // Verify the token
+                        <span class="cov0" title="0">claims, err := authService.VerifySelfToken(cookie.Value)
+                        if err != nil </span><span class="cov0" title="0">{
+                                // Token invalid or expired, continue without authentication
+                                logger.Debug().Err(err).Msg("JWT verification failed")
+                                next.ServeHTTP(w, r)
+                                return
+                        }</span>
+
+                        // Extract email from claims
+                        <span class="cov0" title="0">email, ok := (*claims)["sub"].(string)
+                        if !ok || email == "" </span><span class="cov0" title="0">{
+                                // Invalid claims, continue without authentication
+                                logger.Debug().Msg("Invalid email in JWT claims")
+                                next.ServeHTTP(w, r)
+                                return
+                        }</span>
+
+                        // Add email to request context
+                        <span class="cov0" title="0">ctx := context.WithValue(r.Context(), UserEmailKey, email)
+                        next.ServeHTTP(w, r.WithContext(ctx))</span>
+                })
+        }
+}
+
+// GetUserEmailFromContext extracts the user email from the request context
+// Returns empty string if not found
+func GetUserEmailFromContext(r *http.Request) string <span class="cov0" title="0">{
+        email, ok := r.Context().Value(UserEmailKey).(string)
+        if !ok </span><span class="cov0" title="0">{
+                return ""
+        }</span>
+        <span class="cov0" title="0">return email</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package cart
+
+import (
+        "Obsonarium-backend/internal/handlers/auth"
+        "Obsonarium-backend/internal/repositories"
+        "Obsonarium-backend/internal/services"
+        "Obsonarium-backend/internal/utils/jsonutils"
+        "errors"
+        "net/http"
+        "strconv"
+
+        "github.com/go-chi/chi"
+)
+
+func GetCart(cartService *services.CartService, writeJSON jsonutils.JSONwriter) http.HandlerFunc <span class="cov8" title="1">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov8" title="1">{
+                email := auth.GetUserEmailFromContext(r)
+                if email == "" </span><span class="cov8" title="1">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">cartItems, err := cartService.GetCartItemsByEmail(email)
+                if err != nil </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Failed to fetch cart"}, http.StatusInternalServerError, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">writeJSON(w, jsonutils.Envelope{"cart": cartItems}, http.StatusOK, nil)</span>
+        }
+}
+
+func AddCartItem(cartService *services.CartService, writeJSON jsonutils.JSONwriter, readJSON jsonutils.JSONreader) http.HandlerFunc <span class="cov8" title="1">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov8" title="1">{
+                email := auth.GetUserEmailFromContext(r)
+                if email == "" </span><span class="cov8" title="1">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">var requestBody struct {
+                        ProductID int `json:"product_id"`
+                        Quantity  int `json:"quantity"`
+                }
+
+                err := readJSON(w, r, &amp;requestBody)
+                if err != nil </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Invalid request body"}, http.StatusBadRequest, nil)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if requestBody.ProductID &lt;= 0 </span><span class="cov8" title="1">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Invalid product ID"}, http.StatusBadRequest, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">newQty, err := cartService.AddCartItem(email, requestBody.ProductID, requestBody.Quantity)
+                if err != nil </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Failed to add item to cart"}, http.StatusInternalServerError, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">writeJSON(w, jsonutils.Envelope{"quantity": newQty}, http.StatusOK, nil)</span>
+        }
+}
+
+func RemoveCartItem(cartService *services.CartService, writeJSON jsonutils.JSONwriter) http.HandlerFunc <span class="cov8" title="1">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov8" title="1">{
+                email := auth.GetUserEmailFromContext(r)
+                if email == "" </span><span class="cov8" title="1">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">productIDParam := chi.URLParam(r, "product_id")
+                productID, err := strconv.Atoi(productIDParam)
+                if err != nil </span><span class="cov8" title="1">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Invalid product ID"}, http.StatusBadRequest, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">err = cartService.RemoveCartItem(email, productID)
+                if err != nil </span><span class="cov0" title="0">{
+                        if errors.Is(err, repositories.ErrCartItemNotFound) </span><span class="cov0" title="0">{
+                                writeJSON(w, jsonutils.Envelope{"error": "Cart item not found"}, http.StatusNotFound, nil)
+                                return
+                        }</span>
+                        <span class="cov0" title="0">writeJSON(w, jsonutils.Envelope{"error": "Failed to remove item from cart"}, http.StatusInternalServerError, nil)
+                        return</span>
+                }
+
+                <span class="cov0" title="0">writeJSON(w, jsonutils.Envelope{"message": "Item removed from cart"}, http.StatusOK, nil)</span>
+        }
+}
+
+func GetCartNumber(cartService *services.CartService, writeJSON jsonutils.JSONwriter) http.HandlerFunc <span class="cov8" title="1">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov8" title="1">{
+                email := auth.GetUserEmailFromContext(r)
+                if email == "" </span><span class="cov8" title="1">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">count, err := cartService.GetCartNumberByEmail(email)
+                if err != nil </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Failed to fetch cart number"}, http.StatusInternalServerError, nil)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">writeJSON(w, jsonutils.Envelope{"count": count}, http.StatusOK, nil)</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package healthcheck
+
+import (
+        "Obsonarium-backend/internal/utils/jsonutils"
+        "net/http"
+)
+
+func NewHealthCheckHandler(env string, writeJSON jsonutils.JSONwriter) http.HandlerFunc <span class="cov0" title="0">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov0" title="0">{
+                response := struct {
+                        Status string
+                        Env    string
+                }{
+                        Status: "online",
+                        Env:    env,
+                }
+
+                writeJSON(w, jsonutils.Envelope{"health": response}, http.StatusOK, nil)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package retailer_products
+
+import (
+        "Obsonarium-backend/internal/repositories"
+        "Obsonarium-backend/internal/services"
+        "Obsonarium-backend/internal/utils/jsonutils"
+        "errors"
+        "net/http"
+        "strconv"
+
+        "github.com/go-chi/chi"
+)
+
+func GetProducts(productsService *services.RetailerProductsService, writeJSON jsonutils.JSONwriter) http.HandlerFunc <span class="cov8" title="1">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov8" title="1">{
+                q := r.URL.Query().Get("q")
+                products, err := productsService.GetProducts(q)
+                if err != nil </span><span class="cov8" title="1">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Failed to fetch products"}, http.StatusInternalServerError, nil)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">writeJSON(w, jsonutils.Envelope{"products": products}, http.StatusOK, nil)</span>
+        }
+}
+
+func GetProduct(productsService *services.RetailerProductsService, writeJSON jsonutils.JSONwriter) http.HandlerFunc <span class="cov8" title="1">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov8" title="1">{
+                idParam := chi.URLParam(r, "id")
+                id, err := strconv.Atoi(idParam)
+                if err != nil </span><span class="cov8" title="1">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Invalid product ID"}, http.StatusBadRequest, nil)
+                        return
+                }</span>
+
+                <span class="cov8" title="1">product, err := productsService.GetProduct(id)
+                if err != nil </span><span class="cov8" title="1">{
+                        if errors.Is(err, repositories.ErrProductNotFound) </span><span class="cov8" title="1">{
+                                writeJSON(w, jsonutils.Envelope{"error": "Product not found"}, http.StatusNotFound, nil)
+                                return
+                        }</span>
+                        <span class="cov0" title="0">writeJSON(w, jsonutils.Envelope{"error": "Failed to fetch product"}, http.StatusInternalServerError, nil)
+                        return</span>
+                }
+
+                <span class="cov8" title="1">writeJSON(w, jsonutils.Envelope{"product": product}, http.StatusOK, nil)</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package retailers
+
+import (
+        "Obsonarium-backend/internal/repositories"
+        "Obsonarium-backend/internal/services"
+        "Obsonarium-backend/internal/utils/jsonutils"
+        "errors"
+        "net/http"
+        "strconv"
+
+        "github.com/go-chi/chi"
+)
+
+func GetRetailer(retailersService *services.RetailersService, writeJSON jsonutils.JSONwriter) http.HandlerFunc <span class="cov0" title="0">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov0" title="0">{
+                idParam := chi.URLParam(r, "id")
+                id, err := strconv.Atoi(idParam)
+                if err != nil </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Invalid retailer ID"}, http.StatusBadRequest, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">retailer, err := retailersService.GetRetailer(id)
+                if err != nil </span><span class="cov0" title="0">{
+                        if errors.Is(err, repositories.ErrRetailerNotFound) </span><span class="cov0" title="0">{
+                                writeJSON(w, jsonutils.Envelope{"error": "Retailer not found"}, http.StatusNotFound, nil)
+                                return
+                        }</span>
+                        <span class="cov0" title="0">writeJSON(w, jsonutils.Envelope{"error": "Failed to fetch retailer"}, http.StatusInternalServerError, nil)
+                        return</span>
+                }
+
+                <span class="cov0" title="0">writeJSON(w, jsonutils.Envelope{"retailer": retailer}, http.StatusOK, nil)</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package user_addresses
+
+import (
+        "Obsonarium-backend/internal/handlers/auth"
+        "Obsonarium-backend/internal/models"
+        "Obsonarium-backend/internal/repositories"
+        "Obsonarium-backend/internal/services"
+        "Obsonarium-backend/internal/utils/jsonutils"
+        "errors"
+        "net/http"
+        "strconv"
+
+        "github.com/go-chi/chi"
+)
+
+func GetAddresses(addressesService *services.UserAddressesService, writeJSON jsonutils.JSONwriter) http.HandlerFunc <span class="cov0" title="0">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov0" title="0">{
+                email := auth.GetUserEmailFromContext(r)
+                if email == "" </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">addresses, err := addressesService.GetAddressesByEmail(email)
+                if err != nil </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Failed to fetch addresses"}, http.StatusInternalServerError, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">writeJSON(w, jsonutils.Envelope{"addresses": addresses}, http.StatusOK, nil)</span>
+        }
+}
+
+func AddAddress(addressesService *services.UserAddressesService, writeJSON jsonutils.JSONwriter, readJSON jsonutils.JSONreader) http.HandlerFunc <span class="cov0" title="0">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov0" title="0">{
+                email := auth.GetUserEmailFromContext(r)
+                if email == "" </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">var requestBody struct {
+                        Label          string `json:"label"`
+                        Street_address string `json:"street_address"`
+                        City           string `json:"city"`
+                        State          string `json:"state"`
+                        Postal_code    string `json:"postal_code"`
+                        Country        string `json:"country"`
+                }
+
+                err := readJSON(w, r, &amp;requestBody)
+                if err != nil </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Invalid request body"}, http.StatusBadRequest, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">if requestBody.Street_address == "" </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Street address is required"}, http.StatusBadRequest, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">if requestBody.City == "" </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "City is required"}, http.StatusBadRequest, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">if requestBody.Postal_code == "" </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Postal code is required"}, http.StatusBadRequest, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">if requestBody.Country == "" </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Country is required"}, http.StatusBadRequest, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">address := &amp;models.UserAddress{
+                        Label:          requestBody.Label,
+                        Street_address: requestBody.Street_address,
+                        City:           requestBody.City,
+                        State:          requestBody.State,
+                        Postal_code:    requestBody.Postal_code,
+                        Country:        requestBody.Country,
+                }
+
+                err = addressesService.AddAddress(email, address)
+                if err != nil </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Failed to add address"}, http.StatusInternalServerError, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">writeJSON(w, jsonutils.Envelope{"address": address}, http.StatusOK, nil)</span>
+        }
+}
+
+func RemoveAddress(addressesService *services.UserAddressesService, writeJSON jsonutils.JSONwriter) http.HandlerFunc <span class="cov0" title="0">{
+        return func(w http.ResponseWriter, r *http.Request) </span><span class="cov0" title="0">{
+                email := auth.GetUserEmailFromContext(r)
+                if email == "" </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">addressIDParam := chi.URLParam(r, "id")
+                addressID, err := strconv.Atoi(addressIDParam)
+                if err != nil </span><span class="cov0" title="0">{
+                        writeJSON(w, jsonutils.Envelope{"error": "Invalid address ID"}, http.StatusBadRequest, nil)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">err = addressesService.RemoveAddress(email, addressID)
+                if err != nil </span><span class="cov0" title="0">{
+                        if errors.Is(err, repositories.ErrAddressNotFound) </span><span class="cov0" title="0">{
+                                writeJSON(w, jsonutils.Envelope{"error": "Address not found"}, http.StatusNotFound, nil)
+                                return
+                        }</span>
+                        <span class="cov0" title="0">writeJSON(w, jsonutils.Envelope{"error": "Failed to remove address"}, http.StatusInternalServerError, nil)
+                        return</span>
+                }
+
+                <span class="cov0" title="0">writeJSON(w, jsonutils.Envelope{"message": "Address removed successfully"}, http.StatusOK, nil)</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package repositories
+
+import (
+        "Obsonarium-backend/internal/models"
+        "database/sql"
+        "errors"
+)
+
+var ErrCartItemNotFound = errors.New("cart item not found")
+
+type ICartRepo interface {
+        GetCartItemsByUserID(userID int) ([]models.CartItem, error)
+        AddCartItem(userID int, productID int, quantity int) (int, error)
+        RemoveCartItem(userID int, productID int) error
+        DecreaseCartItem(userID int, productID int) (int, error)
+        GetCartNumber(userID int) (int, error)
+}
+
+type CartRepo struct {
+        DB *sql.DB
+}
+
+func NewCartRepo(db *sql.DB) *CartRepo <span class="cov8" title="1">{
+        return &amp;CartRepo{DB: db}
+}</span>
+
+func (repo *CartRepo) GetCartItemsByUserID(userID int) ([]models.CartItem, error) <span class="cov8" title="1">{
+        query := `
+                SELECT c.id, c.user_id, c.product_id, c.quantity,
+                           p.id, p.retailer_id, p.name, p.price, p.stock_qty, p.image_url, p.description
+                FROM cart_items c
+                JOIN retailer_products p ON p.id = c.product_id
+                WHERE c.user_id = $1
+                ORDER BY c.id`
+
+        rows, err := repo.DB.Query(query, userID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer rows.Close()
+
+        var cartItems []models.CartItem
+
+        for rows.Next() </span><span class="cov8" title="1">{
+                var item models.CartItem
+                // scan cart item fields then product fields
+                err := rows.Scan(
+                        &amp;item.Id,
+                        &amp;item.User_id,
+                        &amp;item.Product_id,
+                        &amp;item.Quantity,
+                        &amp;item.Product.Id,
+                        &amp;item.Product.Retailer_id,
+                        &amp;item.Product.Name,
+                        &amp;item.Product.Price,
+                        &amp;item.Product.Stock_qty,
+                        &amp;item.Product.Image_url,
+                        &amp;item.Product.Description,
+                )
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov8" title="1">cartItems = append(cartItems, item)</span>
+        }
+
+        <span class="cov8" title="1">if err = rows.Err(); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return cartItems, nil</span>
+}
+
+func (repo *CartRepo) AddCartItem(userID int, productID int, quantity int) (int, error) <span class="cov8" title="1">{
+        query := `
+                INSERT INTO cart_items (user_id, product_id, quantity)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (user_id, product_id) DO UPDATE
+                SET quantity = cart_items.quantity + EXCLUDED.quantity
+                RETURNING quantity
+                `
+
+        var newQuantity int
+        err := repo.DB.QueryRow(query, userID, productID, quantity).Scan(&amp;newQuantity)
+
+        return newQuantity, err
+}</span>
+
+func (repo *CartRepo) DecreaseCartItem(userID int, productID int) (int, error) <span class="cov8" title="1">{
+        // First decrease quantity
+        query := `
+                UPDATE cart_items
+                SET quantity = quantity - 1
+                WHERE user_id = $1 AND product_id = $2
+                RETURNING quantity
+        `
+
+        var newQty int
+        err := repo.DB.QueryRow(query, userID, productID).Scan(&amp;newQty)
+
+        if err == sql.ErrNoRows </span><span class="cov8" title="1">{
+                // no cart item found
+                return 0, ErrCartItemNotFound
+        }</span>
+
+        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                return 0, err
+        }</span>
+
+        // If quantity is now 0 → delete the row
+        <span class="cov8" title="1">if newQty &lt;= 0 </span><span class="cov0" title="0">{
+                _, err := repo.DB.Exec(
+                        `DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2`,
+                        userID, productID,
+                )
+                return newQty, err
+        }</span>
+
+        <span class="cov8" title="1">return newQty, nil</span>
+}
+
+func (repo *CartRepo) RemoveCartItem(userID int, productID int) error <span class="cov8" title="1">{
+        query := `
+                DELETE FROM cart_items
+                WHERE user_id = $1 AND product_id = $2`
+
+        result, err := repo.DB.Exec(query, userID, productID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">rowsAffected, err := result.RowsAffected()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">if rowsAffected == 0 </span><span class="cov8" title="1">{
+                return ErrCartItemNotFound
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (repo *CartRepo) GetCartNumber(userID int) (int, error) <span class="cov8" title="1">{
+        query := `
+                SELECT COALESCE(SUM(quantity),0)
+                FROM cart_items
+                WHERE user_id = $1
+        `
+
+        var count int
+        err := repo.DB.QueryRow(query, userID).Scan(&amp;count)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, err
+        }</span>
+
+        <span class="cov8" title="1">return count, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package repositories
+
+import (
+        "Obsonarium-backend/internal/models"
+        "database/sql"
+        "errors"
+)
+
+var ErrProductNotFound = errors.New("product not found")
+
+type IRetailerProductsRepo interface {
+        GetProducts() ([]models.RetailerProduct, error)
+        SearchProducts(keyword string) ([]models.RetailerProduct, error)
+        GetProduct(id int) (*models.RetailerProduct, error)
+}
+
+type RetailerProductsRepo struct {
+        DB *sql.DB
+}
+
+func NewRetailerProductsRepo(db *sql.DB) *RetailerProductsRepo <span class="cov8" title="1">{
+        return &amp;RetailerProductsRepo{DB: db}
+}</span>
+
+func (repo *RetailerProductsRepo) GetProducts() ([]models.RetailerProduct, error) <span class="cov8" title="1">{
+        query := `
+                SELECT id, retailer_id, name, price, stock_qty, image_url, description
+                FROM retailer_products
+                ORDER BY updated_at DESC
+                LIMIT 9
+        `
+
+        rows, err := repo.DB.Query(query)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer rows.Close()
+
+        var products []models.RetailerProduct
+
+        for rows.Next() </span><span class="cov8" title="1">{
+                var product models.RetailerProduct
+                err := rows.Scan(
+                        &amp;product.Id,
+                        &amp;product.Retailer_id,
+                        &amp;product.Name,
+                        &amp;product.Price,
+                        &amp;product.Stock_qty,
+                        &amp;product.Image_url,
+                        &amp;product.Description,
+                )
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov8" title="1">products = append(products, product)</span>
+        }
+
+        <span class="cov8" title="1">if err = rows.Err(); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return products, nil</span>
+}
+
+func (repo *RetailerProductsRepo) SearchProducts(keyword string) ([]models.RetailerProduct, error) <span class="cov8" title="1">{
+        query := `
+        SELECT id, retailer_id, name, price, stock_qty, image_url, description
+        FROM retailer_products
+        WHERE
+            to_tsvector('simple', name || ' ' || coalesce(description, ''))
+            @@ plainto_tsquery('simple', $1)
+        ORDER BY updated_at DESC
+        LIMIT 50;
+    `
+
+        rows, err := repo.DB.Query(query, keyword)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer rows.Close()
+
+        var products []models.RetailerProduct
+
+        for rows.Next() </span><span class="cov8" title="1">{
+                var p models.RetailerProduct
+                err := rows.Scan(
+                        &amp;p.Id,
+                        &amp;p.Retailer_id,
+                        &amp;p.Name,
+                        &amp;p.Price,
+                        &amp;p.Stock_qty,
+                        &amp;p.Image_url,
+                        &amp;p.Description,
+                )
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov8" title="1">products = append(products, p)</span>
+        }
+
+        <span class="cov8" title="1">if err = rows.Err(); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return products, nil</span>
+}
+
+func (repo *RetailerProductsRepo) GetProduct(id int) (*models.RetailerProduct, error) <span class="cov8" title="1">{
+        query := `
+                SELECT id, retailer_id, name, price, stock_qty, image_url, description
+                FROM retailer_products
+                WHERE id = $1`
+
+        var product models.RetailerProduct
+
+        row := repo.DB.QueryRow(query, id)
+
+        err := row.Scan(
+                &amp;product.Id,
+                &amp;product.Retailer_id,
+                &amp;product.Name,
+                &amp;product.Price,
+                &amp;product.Stock_qty,
+                &amp;product.Image_url,
+                &amp;product.Description,
+        )
+
+        if err != nil </span><span class="cov8" title="1">{
+                if errors.Is(err, sql.ErrNoRows) </span><span class="cov8" title="1">{
+                        return &amp;models.RetailerProduct{}, ErrProductNotFound
+                }</span>
+                <span class="cov0" title="0">return &amp;models.RetailerProduct{}, err</span>
+        }
+
+        <span class="cov8" title="1">return &amp;product, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package repositories
+
+import (
+        "Obsonarium-backend/internal/models"
+        "database/sql"
+        "errors"
+)
+
+var ErrRetailerNotFound = errors.New("retailer not found")
+
+type IRetailersRepo interface {
+        GetRetailerByID(id int) (*models.Retailer, error)
+}
+
+type RetailersRepo struct {
+        DB *sql.DB
+}
+
+func NewRetailersRepo(db *sql.DB) *RetailersRepo <span class="cov8" title="1">{
+        return &amp;RetailersRepo{DB: db}
+}</span>
+
+func (repo *RetailersRepo) GetRetailerByID(id int) (*models.Retailer, error) <span class="cov8" title="1">{
+        query := `
+                SELECT id, name, email, phone, address
+                FROM retailers
+                WHERE id = $1`
+
+        var retailer models.Retailer
+
+        row := repo.DB.QueryRow(query, id)
+
+        err := row.Scan(
+                &amp;retailer.Id,
+                &amp;retailer.Name,
+                &amp;retailer.Email,
+                &amp;retailer.Phone,
+                &amp;retailer.Address,
+        )
+
+        if err != nil </span><span class="cov8" title="1">{
+                if errors.Is(err, sql.ErrNoRows) </span><span class="cov8" title="1">{
+                        return &amp;models.Retailer{}, ErrRetailerNotFound
+                }</span>
+                <span class="cov0" title="0">return &amp;models.Retailer{}, err</span>
+        }
+
+        <span class="cov8" title="1">return &amp;retailer, nil</span>
+}
+
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package repositories
+
+import (
+        "Obsonarium-backend/internal/models"
+        "database/sql"
+        "errors"
+)
+
+var ErrAddressNotFound = errors.New("address not found")
+
+type IUserAddressesRepo interface {
+        GetAddressesByUserID(userID int) ([]models.UserAddress, error)
+        AddAddress(address *models.UserAddress) error
+        RemoveAddress(userID int, addressID int) error
+}
+
+type UserAddressesRepo struct {
+        DB *sql.DB
+}
+
+func NewUserAddressesRepo(db *sql.DB) *UserAddressesRepo <span class="cov8" title="1">{
+        return &amp;UserAddressesRepo{DB: db}
+}</span>
+
+func (repo *UserAddressesRepo) GetAddressesByUserID(userID int) ([]models.UserAddress, error) <span class="cov8" title="1">{
+        query := `
+                SELECT id, user_id, label, street_address, city, state, postal_code, country
+                FROM user_addresses
+                WHERE user_id = $1
+                ORDER BY created_at DESC`
+
+        rows, err := repo.DB.Query(query, userID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer rows.Close()
+
+        var addresses []models.UserAddress
+
+        for rows.Next() </span><span class="cov8" title="1">{
+                var address models.UserAddress
+                err := rows.Scan(
+                        &amp;address.Id,
+                        &amp;address.User_id,
+                        &amp;address.Label,
+                        &amp;address.Street_address,
+                        &amp;address.City,
+                        &amp;address.State,
+                        &amp;address.Postal_code,
+                        &amp;address.Country,
+                )
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov8" title="1">addresses = append(addresses, address)</span>
+        }
+
+        <span class="cov8" title="1">if err = rows.Err(); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return addresses, nil</span>
+}
+
+func (repo *UserAddressesRepo) AddAddress(address *models.UserAddress) error <span class="cov8" title="1">{
+        query := `
+                INSERT INTO user_addresses (user_id, label, street_address, city, state, postal_code, country)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING id`
+
+        err := repo.DB.QueryRow(
+                query,
+                address.User_id,
+                address.Label,
+                address.Street_address,
+                address.City,
+                address.State,
+                address.Postal_code,
+                address.Country,
+        ).Scan(&amp;address.Id)
+
+        return err
+}</span>
+
+func (repo *UserAddressesRepo) RemoveAddress(userID int, addressID int) error <span class="cov8" title="1">{
+        query := `
+                DELETE FROM user_addresses
+                WHERE id = $1 AND user_id = $2`
+
+        result, err := repo.DB.Exec(query, addressID, userID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">rowsAffected, err := result.RowsAffected()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">if rowsAffected == 0 </span><span class="cov8" title="1">{
+                return ErrAddressNotFound
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file13" style="display: none">package repositories
+
+import (
+        "Obsonarium-backend/internal/models"
+        "database/sql"
+        "errors"
+)
+
+var ErrUserNotFound = errors.New("user not found")
+
+type IUsersRepo interface {
+        UpsertUser(*models.User) error
+        GetUserByEmail(string) (*models.User, error)
+        // CreateOrGet(string,string,string) (*models.User, error)
+}
+
+type UsersRepo struct {
+        DB *sql.DB
+}
+
+func NewUsersRepo(db *sql.DB) *UsersRepo <span class="cov8" title="1">{
+        return &amp;UsersRepo{DB: db}
+}</span>
+
+func (repo *UsersRepo) UpsertUser(user *models.User) error <span class="cov8" title="1">{
+        query := `
+        INSERT INTO USERS (email, name, profile_picture_url)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (email) DO UPDATE
+        SET 
+            name = EXCLUDED.name,
+            profile_picture_url = EXCLUDED.profile_picture_url
+        RETURNING id, email, name, profile_picture_url
+    `
+
+        _, err := repo.DB.Exec(
+                query,
+                user.Email,
+                user.Name,
+                user.Pfp_url,
+        )
+
+        return err
+}</span>
+
+func (repo *UsersRepo) GetUserByEmail(email string) (*models.User, error) <span class="cov8" title="1">{
+        query := `
+                SELECT id, email, name, profile_picture_url 
+                FROM users 
+                WHERE email = $1`
+
+        var user models.User
+
+        row := repo.DB.QueryRow(query, email)
+
+        err := row.Scan(
+                &amp;user.Id,
+                &amp;user.Email,
+                &amp;user.Name,
+                &amp;user.Pfp_url,
+        )
+
+        if err != nil </span><span class="cov8" title="1">{
+                if errors.Is(err, sql.ErrNoRows) </span><span class="cov8" title="1">{
+                        return &amp;models.User{}, ErrUserNotFound
+                }</span>
+                <span class="cov0" title="0">return &amp;models.User{}, err</span>
+        }
+
+        <span class="cov8" title="1">return &amp;user, nil</span>
+}
+
+// func (repo *UsersRepo) CreateOrGet(email, name, pfp_url string) (*models.User, error) {
+//         // 1. Try to find the user by their email first.
+//         // (This now uses the .Scan() version from above)
+//         foundUser, err := repo.GetUserByEmail(email)
+
+//         if err == nil {
+//                 // --- User Was Found ---
+//                 return foundUser, nil
+//         }
+
+//         // 2. Check if the error was a *real* database problem.
+//         if !errors.Is(err, ErrUserNotFound) {
+//                 return nil, fmt.Errorf("error checking for user: %w", err)
+//         }
+
+//         // --- User Was Not Found ---
+//         // 3. Create the new user.
+//         // We MUST explicitly list the columns in RETURNING to match our Scan.
+//         createQuery := `
+//                 INSERT INTO users (email, name, profile_picture_url)
+//                 VALUES ($1, $2, $3)
+//                 RETURNING id, email, name, profile_picture_url` // No more "RETURNING *"
+
+//         var newUser models.User
+
+//         // 4. Execute the insert, get the row object, and use Scan.
+//         // This is the change you requested.
+//         row := repo.DB.QueryRow(createQuery, email, name, pfp_url)
+//         err = row.Scan(
+//                 &amp;newUser.Id,
+//                 &amp;newUser.Email,
+//                 &amp;newUser.Name,
+//                 &amp;newUser.Pfp_url,
+//         )
+
+//         if err != nil {
+//                 // The INSERT itself failed (e.g., duplicate email from race condition).
+//                 return nil, fmt.Errorf("error creating user: %w", err)
+//         }
+
+//         // 5. Success! Return the newly created user.
+//         return &amp;newUser, nil
+// }
+</pre>
+		
+		<pre class="file" id="file14" style="display: none">package services
+
+import (
+        "Obsonarium-backend/internal/models"
+        "Obsonarium-backend/internal/repositories"
+        "errors"
+        "fmt"
+        "os"
+        "time"
+
+        "github.com/golang-jwt/jwt/v5"
+)
+
+var (
+        ErrSelfTokenCreate  error = errors.New("internal error while creating jwt")
+        ErrSelfTokenVerify  error = errors.New("internal error occured when trying to verify jwt") //hopefully never shows up
+        ErrSelfTokenExpired error = errors.New("self token expired")
+        ErrClaimsParse      error = errors.New("error occured when trying to parse jwt claims")
+        ErrNoUserFound      error = errors.New("user with id is not found")
+        ErrIntDatabase      error = errors.New("internal database error")
+)
+
+type AuthService struct {
+        selfSigningKey string
+        usersRepo      repositories.IUsersRepo
+}
+
+func NewAuthService(usersRepo repositories.IUsersRepo) *AuthService <span class="cov8" title="1">{
+        return &amp;AuthService{
+                selfSigningKey: os.Getenv("LOCOSYNC_SIGNING"),
+                usersRepo:      usersRepo,
+        }
+}</span>
+
+func (authService *AuthService) CreateJWT(user *models.User) (string, error) <span class="cov8" title="1">{
+        claims := jwt.MapClaims{
+                "sub": user.Email,
+                "exp": time.Now().Add(7 * 24 * time.Hour).Unix(), // expires in 7 days
+                "iat": time.Now().Unix(),                         // issued at
+                "iss": "Obsonarium",
+        }
+
+        token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+        self_token, err := token.SignedString([]byte(authService.selfSigningKey))
+
+        if err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("%w,%w", ErrSelfTokenCreate, err)
+        }</span>
+
+        <span class="cov8" title="1">return self_token, nil</span>
+}
+
+func (authService *AuthService) VerifySelfToken(selfToken string) (*jwt.MapClaims, error) <span class="cov8" title="1">{
+        token, err := jwt.Parse(selfToken, func(token *jwt.Token) (interface{}, error) </span><span class="cov8" title="1">{
+                // Validate signing algorithm
+                if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("unexpected signing method")
+                }</span>
+                <span class="cov8" title="1">return []byte(authService.selfSigningKey), nil</span>
+        })
+
+        <span class="cov8" title="1">if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("%w:%w", ErrSelfTokenVerify, err)
+        }</span>
+
+        <span class="cov8" title="1">if claims, ok := token.Claims.(jwt.MapClaims); ok &amp;&amp; token.Valid </span><span class="cov8" title="1">{
+                if exp, ok := claims["exp"].(float64); ok </span><span class="cov8" title="1">{
+                        if time.Now().Unix() &gt; int64(exp) </span><span class="cov0" title="0">{
+                                return nil, ErrSelfTokenExpired
+                        }</span>
+                }
+                <span class="cov8" title="1">return &amp;claims, nil</span>
+        }
+
+        <span class="cov0" title="0">return nil, ErrSelfTokenVerify</span>
+
+}
+
+func (authService *AuthService) ClaimsToUser(claims *jwt.MapClaims) (*models.User, error) <span class="cov0" title="0">{
+        email := (*claims)["sub"].(string)
+
+        user, err := authService.usersRepo.GetUserByEmail(email)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return &amp;models.User{}, err
+        }</span>
+
+        <span class="cov0" title="0">return user, fmt.Errorf("%w:%w", ErrClaimsParse, err)</span>
+}
+
+func (authService *AuthService) UpsertUser(email, name, pfp_url string) error <span class="cov8" title="1">{
+        // For now, it just calls the repository.
+        // In the future, you could add logic here like:
+        // - Validating the email format
+        // - Sanitizing the 'name' input
+        // - Logging the creation of a new user
+
+        recievedUser := models.User{
+                Email:   email,
+                Name:    name,
+                Pfp_url: pfp_url,
+        }
+        err := authService.usersRepo.UpsertUser(&amp;recievedUser)
+
+        if err != nil </span><span class="cov8" title="1">{
+                // You can also wrap the error in a service-level error
+                return fmt.Errorf("service error finding or creating user: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file15" style="display: none">package services
+
+import (
+        "Obsonarium-backend/internal/models"
+        "Obsonarium-backend/internal/repositories"
+        "fmt"
+)
+
+type CartService struct {
+        cartRepo  repositories.ICartRepo
+        usersRepo repositories.IUsersRepo
+}
+
+func NewCartService(cartRepo repositories.ICartRepo, usersRepo repositories.IUsersRepo) *CartService <span class="cov8" title="1">{
+        return &amp;CartService{
+                cartRepo:  cartRepo,
+                usersRepo: usersRepo,
+        }
+}</span>
+
+func (s *CartService) GetCartItemsByEmail(email string) ([]models.CartItem, error) <span class="cov8" title="1">{
+        user, err := s.usersRepo.GetUserByEmail(email)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("service error fetching user: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">cartItems, err := s.cartRepo.GetCartItemsByUserID(user.Id)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("service error fetching cart items: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return cartItems, nil</span>
+}
+
+func (s *CartService) AddCartItem(email string, productID int, quantity int) (int, error) <span class="cov8" title="1">{
+        user, err := s.usersRepo.GetUserByEmail(email)
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, fmt.Errorf("service error fetching user: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">var newQuantity int
+        if quantity == 1 </span><span class="cov8" title="1">{
+                newQuantity, err = s.cartRepo.AddCartItem(user.Id, productID, quantity)
+        }</span>
+
+        <span class="cov8" title="1">if quantity == -1 </span><span class="cov8" title="1">{
+                newQuantity, err = s.cartRepo.DecreaseCartItem(user.Id, productID)
+        }</span>
+        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                return 0, fmt.Errorf("service error adding cart item: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return newQuantity, nil</span>
+}
+
+func (s *CartService) RemoveCartItem(email string, productID int) error <span class="cov8" title="1">{
+        user, err := s.usersRepo.GetUserByEmail(email)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("service error fetching user: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">err = s.cartRepo.RemoveCartItem(user.Id, productID)
+        if err != nil </span><span class="cov8" title="1">{
+                if err == repositories.ErrCartItemNotFound </span><span class="cov8" title="1">{
+                        return err
+                }</span>
+                <span class="cov0" title="0">return fmt.Errorf("service error removing cart item: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (s *CartService) GetCartNumberByEmail(email string) (int, error) <span class="cov8" title="1">{
+        user, err := s.usersRepo.GetUserByEmail(email)
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, fmt.Errorf("service error fetching user: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">count, err := s.cartRepo.GetCartNumber(user.Id)
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, fmt.Errorf("service error fetching cart number: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return count, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file16" style="display: none">package services
+
+import (
+        "Obsonarium-backend/internal/models"
+        "Obsonarium-backend/internal/repositories"
+        "fmt"
+)
+
+type RetailerProductsService struct {
+        productsRepo repositories.IRetailerProductsRepo
+}
+
+func NewRetailerProductsService(productsRepo repositories.IRetailerProductsRepo) *RetailerProductsService <span class="cov8" title="1">{
+        return &amp;RetailerProductsService{
+                productsRepo: productsRepo,
+        }
+}</span>
+
+func (s *RetailerProductsService) GetProducts(q string) ([]models.RetailerProduct, error) <span class="cov8" title="1">{
+    if q != "" </span><span class="cov8" title="1">{
+        // full-text search
+        return s.productsRepo.SearchProducts(q)
+    }</span>
+
+    // default 10 products
+    <span class="cov8" title="1">return s.productsRepo.GetProducts()</span>
+}
+
+
+func (s *RetailerProductsService) GetProduct(id int) (*models.RetailerProduct, error) <span class="cov8" title="1">{
+        product, err := s.productsRepo.GetProduct(id)
+        if err != nil </span><span class="cov8" title="1">{
+                if err == repositories.ErrProductNotFound </span><span class="cov8" title="1">{
+                        return &amp;models.RetailerProduct{}, err
+                }</span>
+                <span class="cov0" title="0">return &amp;models.RetailerProduct{}, fmt.Errorf("service error fetching product: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">return product, nil</span>
+}
+
+</pre>
+		
+		<pre class="file" id="file17" style="display: none">package services
+
+import (
+        "Obsonarium-backend/internal/models"
+        "Obsonarium-backend/internal/repositories"
+        "fmt"
+)
+
+type RetailersService struct {
+        retailersRepo repositories.IRetailersRepo
+}
+
+func NewRetailersService(retailersRepo repositories.IRetailersRepo) *RetailersService <span class="cov8" title="1">{
+        return &amp;RetailersService{
+                retailersRepo: retailersRepo,
+        }
+}</span>
+
+func (s *RetailersService) GetRetailer(id int) (*models.Retailer, error) <span class="cov8" title="1">{
+        retailer, err := s.retailersRepo.GetRetailerByID(id)
+        if err != nil </span><span class="cov8" title="1">{
+                if err == repositories.ErrRetailerNotFound </span><span class="cov8" title="1">{
+                        return &amp;models.Retailer{}, err
+                }</span>
+                <span class="cov0" title="0">return &amp;models.Retailer{}, fmt.Errorf("service error fetching retailer: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">return retailer, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file18" style="display: none">package services
+
+import (
+        "Obsonarium-backend/internal/models"
+        "Obsonarium-backend/internal/repositories"
+        "fmt"
+)
+
+type UserAddressesService struct {
+        addressesRepo repositories.IUserAddressesRepo
+        usersRepo     repositories.IUsersRepo
+}
+
+func NewUserAddressesService(addressesRepo repositories.IUserAddressesRepo, usersRepo repositories.IUsersRepo) *UserAddressesService <span class="cov8" title="1">{
+        return &amp;UserAddressesService{
+                addressesRepo: addressesRepo,
+                usersRepo:     usersRepo,
+        }
+}</span>
+
+func (s *UserAddressesService) GetAddressesByEmail(email string) ([]models.UserAddress, error) <span class="cov8" title="1">{
+        user, err := s.usersRepo.GetUserByEmail(email)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("service error fetching user: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">addresses, err := s.addressesRepo.GetAddressesByUserID(user.Id)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("service error fetching addresses: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return addresses, nil</span>
+}
+
+func (s *UserAddressesService) AddAddress(email string, address *models.UserAddress) error <span class="cov8" title="1">{
+        user, err := s.usersRepo.GetUserByEmail(email)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("service error fetching user: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">address.User_id = user.Id
+        err = s.addressesRepo.AddAddress(address)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("service error adding address: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (s *UserAddressesService) RemoveAddress(email string, addressID int) error <span class="cov8" title="1">{
+        user, err := s.usersRepo.GetUserByEmail(email)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("service error fetching user: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">err = s.addressesRepo.RemoveAddress(user.Id, addressID)
+        if err != nil </span><span class="cov8" title="1">{
+                if err == repositories.ErrAddressNotFound </span><span class="cov8" title="1">{
+                        return err
+                }</span>
+                <span class="cov0" title="0">return fmt.Errorf("service error removing address: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file19" style="display: none">package jsonutils
+
+import (
+        "encoding/json"
+        "errors"
+        "fmt"
+        "io"
+        "net/http"
+)
+
+type Envelope map[string]interface{}
+
+type JSONwriter func(http.ResponseWriter, Envelope, int, http.Header) error
+type JSONreader func(http.ResponseWriter, *http.Request, interface{}) error
+
+type JSONutils struct {
+        Writer JSONwriter
+        Reader JSONreader
+}
+
+func NewJSONutils() JSONutils <span class="cov8" title="1">{
+        return JSONutils{
+                Writer: WriteJSON,
+                Reader: readJSON,
+        }
+}</span>
+
+// writeJSON writes a json response with configurable status and headers
+func WriteJSON(w http.ResponseWriter, data Envelope, status int, headers http.Header) error <span class="cov8" title="1">{
+        // http.Header has the type map[string][]string\
+
+        json, err := json.Marshal(data)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">json = append(json, '\n') //for easier viewing with curl
+
+        for key, value := range headers </span><span class="cov8" title="1">{
+                (w).Header()[key] = value
+        }</span>
+
+        <span class="cov8" title="1">(w).Header().Set("Content-Type", "application/json")
+        (w).WriteHeader(status)
+        (w).Write(json)
+        return nil</span>
+}
+
+// ReadJSON reads a json request, given a destination
+func readJSON(_ http.ResponseWriter, r *http.Request, dst interface{}) error <span class="cov8" title="1">{
+        // Decode the request body into the target destination.
+        err := json.NewDecoder(r.Body).Decode(dst)
+        if err != nil </span><span class="cov8" title="1">{
+                var syntaxError *json.SyntaxError
+                var unmarshalTypeError *json.UnmarshalTypeError
+                var invalidUnmarshalError *json.InvalidUnmarshalError
+                switch </span>{
+                case errors.As(err, &amp;syntaxError):<span class="cov8" title="1">
+                        return fmt.Errorf("body contains badly-formed JSON (at character %d)", syntaxError.Offset)</span>
+                case errors.Is(err, io.ErrUnexpectedEOF):<span class="cov0" title="0">
+                        return errors.New("body contains badly-formed JSON")</span>
+                case errors.As(err, &amp;unmarshalTypeError):<span class="cov0" title="0">
+                        if unmarshalTypeError.Field != "" </span><span class="cov0" title="0">{
+                                return fmt.Errorf("body contains incorrect JSON type for field %q", unmarshalTypeError.Field)
+                        }</span>
+                        <span class="cov0" title="0">return fmt.Errorf("body contains incorrect JSON type (at character %d)", unmarshalTypeError.Offset)</span>
+                case errors.Is(err, io.EOF):<span class="cov8" title="1">
+                        return errors.New("body must not be empty")</span>
+                case errors.As(err, &amp;invalidUnmarshalError):<span class="cov0" title="0">
+                        panic(err)</span>
+                default:<span class="cov0" title="0">
+                        return err</span>
+                }
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file20" style="display: none">package utils
+
+import (
+        "Obsonarium-backend/internal/models"
+        "Obsonarium-backend/internal/repositories"
+        "errors"
+        "fmt"
+        "os"
+        "time"
+
+        "github.com/golang-jwt/jwt/v5"
+)
+
+var (
+        ErrSelfTokenCreate  error = errors.New("internal error while creating jwt")
+        ErrSelfTokenVerify  error = errors.New("internal error occured when trying to verify jwt") //hopefully never shows up
+        ErrSelfTokenExpired error = errors.New("self token expired")
+        ErrClaimsParse      error = errors.New("error occured when trying to parse jwt claims")
+        ErrNoUserFound      error = errors.New("user with id is not found")
+        ErrIntDatabase      error = errors.New("internal database error")
+)
+
+type AuthService struct {
+        selfSigningKey string
+        usersRepo      repositories.IUsersRepo
+}
+
+func NewUsersService(usersRepo repositories.IUsersRepo) *AuthService <span class="cov0" title="0">{
+        return &amp;AuthService{
+                selfSigningKey: os.Getenv("LOCOSYNC_SIGNING"),
+                usersRepo:      usersRepo,
+        }
+}</span>
+
+func (authService AuthService) CreateJWT(user *models.User) (string,error)<span class="cov0" title="0">{
+        claims := jwt.MapClaims{
+                "sub": user.Email,
+                "exp": time.Now().Add(7 * 24 * time.Hour).Unix(), // expires in 24 hours
+                "iat": time.Now().Unix(),                         // issued at
+                "iss": "Obsonarium",
+        }
+
+        token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+        self_token, err := token.SignedString([]byte(authService.selfSigningKey))
+
+                if err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("%w,%w", ErrSelfTokenCreate, err)
+        }</span>
+
+        <span class="cov0" title="0">return self_token, nil</span>
+}
+
+func (authService *AuthService) VerifySelfToken(selfToken string) (*jwt.MapClaims, error) <span class="cov0" title="0">{
+        token, err := jwt.Parse(selfToken, func(token *jwt.Token) (interface{}, error) </span><span class="cov0" title="0">{
+                // Validate signing algorithm
+                if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("unexpected signing method")
+                }</span>
+                <span class="cov0" title="0">return []byte(authService.selfSigningKey), nil</span>
+        })
+
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("%w:%w", ErrSelfTokenVerify, err)
+        }</span>
+
+        <span class="cov0" title="0">if claims, ok := token.Claims.(jwt.MapClaims); ok &amp;&amp; token.Valid </span><span class="cov0" title="0">{
+                if exp, ok := claims["exp"].(float64); ok </span><span class="cov0" title="0">{
+                        if time.Now().Unix() &gt; int64(exp) </span><span class="cov0" title="0">{
+                                return nil, ErrSelfTokenExpired
+                        }</span>
+                }
+                <span class="cov0" title="0">return &amp;claims, nil</span>
+        }
+
+        <span class="cov0" title="0">return nil, ErrSelfTokenVerify</span>
+
+}
+
+func (authService *AuthService) ClaimsToUser(claims *jwt.MapClaims) (*models.User, error) <span class="cov0" title="0">{
+        email := (*claims)["sub"].(string)
+
+        user, err := authService.usersRepo.GetUserByEmail(email)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return &amp;models.User{}, err
+        }</span>
+
+        <span class="cov0" title="0">return user, fmt.Errorf("%w:%w", ErrClaimsParse, err)</span>
+}</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
