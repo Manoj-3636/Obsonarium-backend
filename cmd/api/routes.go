@@ -26,7 +26,7 @@ func (app *application) newRouter() *chi.Mux {
 
 	// Cart routes with authentication middleware
 	r.Route("/api/cart", func(r chi.Router) {
-		r.Use(auth.RequireAuth(&app.shared_deps.AuthService, app.shared_deps.logger))
+		r.Use(auth.RequireAuth(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
 		r.Get("/", cart.GetCart(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
 		r.Get("/number", cart.GetCartNumber(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
 		r.Post("/", cart.AddCartItem(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
@@ -35,7 +35,7 @@ func (app *application) newRouter() *chi.Mux {
 
 	// User addresses routes with authentication middleware
 	r.Route("/api/addresses", func(r chi.Router) {
-		r.Use(auth.RequireAuth(&app.shared_deps.AuthService, app.shared_deps.logger))
+		r.Use(auth.RequireAuth(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
 		r.Get("/", user_addresses.GetAddresses(&app.shared_deps.UserAddressesService, app.shared_deps.JSONutils.Writer))
 		r.Post("/", user_addresses.AddAddress(&app.shared_deps.UserAddressesService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 		r.Delete("/{id}", user_addresses.RemoveAddress(&app.shared_deps.UserAddressesService, app.shared_deps.JSONutils.Writer))
