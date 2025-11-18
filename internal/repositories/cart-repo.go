@@ -26,10 +26,12 @@ func NewCartRepo(db *sql.DB) *CartRepo {
 
 func (repo *CartRepo) GetCartItemsByUserID(userID int) ([]models.CartItem, error) {
 	query := `
-		SELECT id, user_id, product_id, quantity
-		FROM cart_items
-		WHERE user_id = $1
-		ORDER BY id`
+		SELECT c.id, c.user_id, c.product_id, c.quantity,
+			   p.id, p.retailer_id, p.name, p.price, p.stock_qty, p.image_url, p.description
+		FROM cart_items c
+		JOIN retailer_products p ON p.id = c.product_id
+		WHERE c.user_id = $1
+		ORDER BY c.id`
 
 	rows, err := repo.DB.Query(query, userID)
 	if err != nil {
@@ -41,11 +43,19 @@ func (repo *CartRepo) GetCartItemsByUserID(userID int) ([]models.CartItem, error
 
 	for rows.Next() {
 		var item models.CartItem
+		// scan cart item fields then product fields
 		err := rows.Scan(
 			&item.Id,
 			&item.User_id,
 			&item.Product_id,
 			&item.Quantity,
+			&item.Product.Id,
+			&item.Product.Retailer_id,
+			&item.Product.Name,
+			&item.Product.Price,
+			&item.Product.Stock_qty,
+			&item.Product.Image_url,
+			&item.Product.Description,
 		)
 		if err != nil {
 			return nil, err

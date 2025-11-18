@@ -5,4 +5,5 @@ type CartItem struct {
 	User_id    int
 	Product_id int
 	Quantity   int
+	Product    RetailerProduct
 }
