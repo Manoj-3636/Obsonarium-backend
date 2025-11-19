@@ -53,9 +53,14 @@ func NewAuth(logger zerolog.Logger, env string) {
 	//I dont know how the fuck this works please don't change it
 	gothic.Store = store
 
+	consumerProvider := google.New(googleClientId, googleClientSecret, "http://localhost:5173/api/auth/google/callback", "email", "profile")
+	
+	retailerProvider := google.New(googleClientId, googleClientSecret, "http://localhost:5174/api/auth/google-retailer/callback", "email", "profile")
+	retailerProvider.SetName("google-retailer")
+
 	goth.UseProviders(
-		// TOOD don't hardocode
-		google.New(googleClientId, googleClientSecret, "http://localhost:5173/api/auth/google/callback", "email", "profile"),
+		consumerProvider,
+		retailerProvider,
 	)
 }
 
@@ -71,6 +76,43 @@ func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService) h
 			return
 		}
 
+		if provider == "google-retailer" {
+			retailer := models.Retailer{
+				Email: gothUser.Email,
+				Name:  gothUser.Name,
+			}
+
+			err = authService.UpsertRetailer(gothUser.Email, gothUser.Name)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to find or create retailer")
+				http.Error(w, "Failed to process retailer", http.StatusInternalServerError)
+				return
+			}
+
+			jwtString, err := authService.CreateRetailerJWT(&retailer)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to create JWT")
+				http.Error(w, "Failed to create session", http.StatusInternalServerError)
+				return
+			}
+
+			cookie := &http.Cookie{
+				Name:     "jwt",
+				Value:    jwtString,
+				Expires:  time.Now().Add(7 * 24 * time.Hour),
+				Path:     "/",
+				HttpOnly: true,
+				Secure:   false,
+				SameSite: http.SameSiteLaxMode,
+			}
+			http.SetCookie(w, cookie)
+
+			// Redirect to retailer home
+			http.Redirect(w, r, "http://localhost:5174", http.StatusFound)
+			return
+		}
+
+		// Default to consumer logic
 		receivedUser := models.User{
 			Email:   gothUser.Email,
 			Name:    gothUser.Name,

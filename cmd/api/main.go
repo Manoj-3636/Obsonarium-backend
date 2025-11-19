@@ -64,7 +64,7 @@ func main() {
 		shared_deps: dependencies{
 			logger:                  logger,
 			JSONutils:               jsonutils.NewJSONutils(),
-			AuthService:             *services.NewAuthService(repositories.NewUsersRepo(db)),
+			AuthService:             *services.NewAuthService(repositories.NewUsersRepo(db), repositories.NewRetailersRepo(db)),
 			RetailerProductsService: *services.NewRetailerProductsService(repositories.NewRetailerProductsRepo(db)),
 			RetailersService:        *services.NewRetailersService(repositories.NewRetailersRepo(db)),
 			CartService:             *services.NewCartService(repositories.NewCartRepo(db), repositories.NewUsersRepo(db)),

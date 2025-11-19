@@ -23,21 +23,24 @@ var (
 type AuthService struct {
 	selfSigningKey string
 	usersRepo      repositories.IUsersRepo
+	retailersRepo  repositories.IRetailersRepo
 }
 
-func NewAuthService(usersRepo repositories.IUsersRepo) *AuthService {
+func NewAuthService(usersRepo repositories.IUsersRepo, retailersRepo repositories.IRetailersRepo) *AuthService {
 	return &AuthService{
 		selfSigningKey: os.Getenv("LOCOSYNC_SIGNING"),
 		usersRepo:      usersRepo,
+		retailersRepo:  retailersRepo,
 	}
 }
 
 func (authService *AuthService) CreateJWT(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
-		"sub": user.Email,
-		"exp": time.Now().Add(7 * 24 * time.Hour).Unix(), // expires in 7 days
-		"iat": time.Now().Unix(),                         // issued at
-		"iss": "Obsonarium",
+		"sub":  user.Email,
+		"role": "consumer",
+		"exp":  time.Now().Add(7 * 24 * time.Hour).Unix(), // expires in 7 days
+		"iat":  time.Now().Unix(),                         // issued at
+		"iss":  "Obsonarium",
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -108,4 +111,37 @@ func (authService *AuthService) UpsertUser(email, name, pfp_url string) error {
 	}
 
 	return nil
+}
+
+func (authService *AuthService) UpsertRetailer(email, name string) error {
+	retailer := models.Retailer{
+		Email: email,
+		Name:  name,
+	}
+	err := authService.retailersRepo.UpsertRetailer(&retailer)
+
+	if err != nil {
+		return fmt.Errorf("service error finding or creating retailer: %w", err)
+	}
+
+	return nil
+}
+
+func (authService *AuthService) CreateRetailerJWT(retailer *models.Retailer) (string, error) {
+	claims := jwt.MapClaims{
+		"sub":  retailer.Email,
+		"role": "retailer",
+		"exp":  time.Now().Add(7 * 24 * time.Hour).Unix(), // expires in 7 days
+		"iat":  time.Now().Unix(),                         // issued at
+		"iss":  "Obsonarium",
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	self_token, err := token.SignedString([]byte(authService.selfSigningKey))
+
+	if err != nil {
+		return "", fmt.Errorf("%w,%w", ErrSelfTokenCreate, err)
+	}
+
+	return self_token, nil
 }
