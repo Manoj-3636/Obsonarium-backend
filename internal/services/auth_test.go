@@ -40,7 +40,8 @@ func TestNewAuthService(t *testing.T) {
 	defer os.Unsetenv("LOCOSYNC_SIGNING")
 
 	mockRepo := &MockUsersRepo{}
-	service := NewAuthService(mockRepo)
+	mockRetailersRepo := &MockRetailersRepo{}
+	service := NewAuthService(mockRepo, mockRetailersRepo)
 
 	if service == nil {
 		t.Fatal("NewAuthService returned nil")
@@ -58,7 +59,8 @@ func TestAuthService_CreateJWT(t *testing.T) {
 	defer os.Unsetenv("LOCOSYNC_SIGNING")
 
 	mockRepo := &MockUsersRepo{}
-	service := NewAuthService(mockRepo)
+	mockRetailersRepo := &MockRetailersRepo{}
+	service := NewAuthService(mockRepo, mockRetailersRepo)
 
 	user := &models.User{
 		Id:    1,
@@ -107,7 +109,8 @@ func TestAuthService_VerifySelfToken(t *testing.T) {
 	defer os.Unsetenv("LOCOSYNC_SIGNING")
 
 	mockRepo := &MockUsersRepo{}
-	service := NewAuthService(mockRepo)
+	mockRetailersRepo := &MockRetailersRepo{}
+	service := NewAuthService(mockRepo, mockRetailersRepo)
 
 	user := &models.User{
 		Email: "test@example.com",
@@ -139,7 +142,8 @@ func TestAuthService_VerifySelfToken_Expired(t *testing.T) {
 	defer os.Unsetenv("LOCOSYNC_SIGNING")
 
 	mockRepo := &MockUsersRepo{}
-	service := NewAuthService(mockRepo)
+	mockRetailersRepo := &MockRetailersRepo{}
+	service := NewAuthService(mockRepo, mockRetailersRepo)
 
 	// Create an expired token
 	claims := jwt.MapClaims{
@@ -180,7 +184,8 @@ func TestAuthService_UpsertUser(t *testing.T) {
 			},
 		}
 
-		service := NewAuthService(mockRepo)
+		mockRetailersRepo := &MockRetailersRepo{}
+		service := NewAuthService(mockRepo, mockRetailersRepo)
 		err := service.UpsertUser("test@example.com", "Test User", "https://example.com/pfp.jpg")
 		if err != nil {
 			t.Errorf("UpsertUser returned error: %v", err)
@@ -194,7 +199,8 @@ func TestAuthService_UpsertUser(t *testing.T) {
 			},
 		}
 
-		service := NewAuthService(mockRepo)
+		mockRetailersRepo := &MockRetailersRepo{}
+		service := NewAuthService(mockRepo, mockRetailersRepo)
 		err := service.UpsertUser("test@example.com", "Test User", "https://example.com/pfp.jpg")
 		if err == nil {
 			t.Fatal("Expected error from UpsertUser, got nil")

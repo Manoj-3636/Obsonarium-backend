@@ -15,7 +15,10 @@ import (
 
 // MockRetailersRepoForTesting implements IRetailersRepo
 type MockRetailersRepoForTesting struct {
-	GetRetailerByIDFunc func(id int) (*models.Retailer, error)
+	GetRetailerByIDFunc    func(id int) (*models.Retailer, error)
+	UpsertRetailerFunc     func(retailer *models.Retailer) error
+	GetRetailerByEmailFunc func(email string) (*models.Retailer, error)
+	UpdateRetailerFunc     func(retailer *models.Retailer) error
 }
 
 func (m *MockRetailersRepoForTesting) GetRetailerByID(id int) (*models.Retailer, error) {
@@ -23,6 +26,27 @@ func (m *MockRetailersRepoForTesting) GetRetailerByID(id int) (*models.Retailer,
 		return m.GetRetailerByIDFunc(id)
 	}
 	return nil, errors.New("not implemented")
+}
+
+func (m *MockRetailersRepoForTesting) UpsertRetailer(retailer *models.Retailer) error {
+	if m.UpsertRetailerFunc != nil {
+		return m.UpsertRetailerFunc(retailer)
+	}
+	return errors.New("not implemented")
+}
+
+func (m *MockRetailersRepoForTesting) GetRetailerByEmail(email string) (*models.Retailer, error) {
+	if m.GetRetailerByEmailFunc != nil {
+		return m.GetRetailerByEmailFunc(email)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockRetailersRepoForTesting) UpdateRetailer(retailer *models.Retailer) error {
+	if m.UpdateRetailerFunc != nil {
+		return m.UpdateRetailerFunc(retailer)
+	}
+	return errors.New("not implemented")
 }
 
 func TestGetRetailer(t *testing.T) {
@@ -88,4 +112,3 @@ func TestGetRetailer(t *testing.T) {
 		})
 	}
 }
-
