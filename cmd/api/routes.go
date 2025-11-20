@@ -6,7 +6,9 @@ import (
 	"Obsonarium-backend/internal/handlers/healthcheck"
 	"Obsonarium-backend/internal/handlers/retailer_products"
 	"Obsonarium-backend/internal/handlers/retailers"
+	"Obsonarium-backend/internal/handlers/upload_handler"
 	"Obsonarium-backend/internal/handlers/user_addresses"
+	"net/http"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -16,12 +18,16 @@ func (app *application) newRouter() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
+	// File server for uploaded files
+	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+
 	r.Get("/api/healthcheck", healthcheck.NewHealthCheckHandler(app.config.Env, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/auth/{provider}/callback", auth.NewAuthCallback(app.shared_deps.logger, &app.shared_deps.AuthService, &app.shared_deps.RetailersService))
 	r.Get("/api/auth/{provider}", auth.AuthProvider)
 	r.Get("/api/logout/{provider}", auth.AuthLogout)
 	r.Get("/api/shop", retailer_products.GetProducts(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/shop/{id}", retailer_products.GetProduct(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
+	r.Post("/api/upload/product-image", upload_handler.UploadProductImage(app.shared_deps.UploadService, app.shared_deps.JSONutils.Writer))
 
 	// Cart routes with consumer authentication middleware
 	r.Route("/api/cart", func(r chi.Router) {
