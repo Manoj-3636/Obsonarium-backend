@@ -342,7 +342,7 @@ func RequireRetailer(authService *services.AuthService, logger zerolog.Logger, w
 			cookie, err := r.Cookie("jwt")
 			if err != nil {
 				// No cookie found, return 401 Unauthorized
-				logger.Debug().Msg("No JWT cookie found")
+				logger.Info().Str("path", r.URL.Path).Msg("No JWT cookie found in RequireRetailer")
 				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
 				return
 			}
@@ -351,7 +351,7 @@ func RequireRetailer(authService *services.AuthService, logger zerolog.Logger, w
 			claims, err := authService.VerifySelfToken(cookie.Value)
 			if err != nil {
 				// Token invalid or expired, return 401 Unauthorized
-				logger.Debug().Err(err).Msg("JWT verification failed")
+				logger.Info().Err(err).Str("path", r.URL.Path).Msg("JWT verification failed in RequireRetailer")
 				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
 				return
 			}
@@ -359,7 +359,7 @@ func RequireRetailer(authService *services.AuthService, logger zerolog.Logger, w
 			// Check role is "retailer"
 			role, ok := (*claims)["role"].(string)
 			if !ok || role != "retailer" {
-				logger.Debug().Str("role", role).Msg("Invalid role for retailer endpoint")
+				logger.Info().Str("role", role).Str("path", r.URL.Path).Msg("Invalid role for retailer endpoint")
 				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
 				return
 			}

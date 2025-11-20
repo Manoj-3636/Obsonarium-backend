@@ -26,17 +26,19 @@ type config struct {
 }
 
 type dependencies struct {
-	logger                   zerolog.Logger
-	JSONutils                jsonutils.JSONutils
-	AuthService              services.AuthService
-	RetailerProductsService  services.RetailerProductsService
-	RetailersService         services.RetailersService
-	WholesalersService       services.WholesalersService
-	WholesalerProductService services.WholesalerProductService
-	ProductService           services.ProductService
-	CartService              services.CartService
-	UserAddressesService     services.UserAddressesService
-	UploadService            *services.UploadService
+	logger                    zerolog.Logger
+	JSONutils                 jsonutils.JSONutils
+	AuthService               services.AuthService
+	RetailerProductsService   services.RetailerProductsService
+	RetailersService          services.RetailersService
+	WholesalersService        services.WholesalersService
+	WholesalerProductService  services.WholesalerProductService
+	WholesalerProductsService services.WholesalerProductsService
+	ProductService            services.ProductService
+	CartService               services.CartService
+	RetailerCartService       services.RetailerCartService
+	UserAddressesService      services.UserAddressesService
+	UploadService             *services.UploadService
 }
 
 type application struct {
@@ -66,17 +68,19 @@ func main() {
 	app := &application{
 		config: cfg,
 		shared_deps: dependencies{
-			logger:                   logger,
-			JSONutils:                jsonutils.NewJSONutils(),
-			AuthService:              *services.NewAuthService(repositories.NewUsersRepo(db), repositories.NewRetailersRepo(db), repositories.NewWholesalersRepo(db)),
-			RetailerProductsService:  *services.NewRetailerProductsService(repositories.NewRetailerProductsRepo(db)),
-			RetailersService:         *services.NewRetailersService(repositories.NewRetailersRepo(db)),
-			WholesalersService:       *services.NewWholesalersService(repositories.NewWholesalersRepo(db)),
-			WholesalerProductService: *services.NewWholesalerProductService(repositories.NewWholesalerProductRepository(db)),
-			ProductService:           *services.NewProductService(repositories.NewProductRepository(db)),
-			CartService:              *services.NewCartService(repositories.NewCartRepo(db), repositories.NewUsersRepo(db)),
-			UserAddressesService:     *services.NewUserAddressesService(repositories.NewUserAddressesRepo(db), repositories.NewUsersRepo(db)),
-			UploadService:            services.NewUploadService(),
+			logger:                    logger,
+			JSONutils:                 jsonutils.NewJSONutils(),
+			AuthService:               *services.NewAuthService(repositories.NewUsersRepo(db), repositories.NewRetailersRepo(db), repositories.NewWholesalersRepo(db)),
+			RetailerProductsService:   *services.NewRetailerProductsService(repositories.NewRetailerProductsRepo(db)),
+			RetailersService:          *services.NewRetailersService(repositories.NewRetailersRepo(db)),
+			WholesalersService:        *services.NewWholesalersService(repositories.NewWholesalersRepo(db)),
+			WholesalerProductService:  *services.NewWholesalerProductService(repositories.NewWholesalerProductRepository(db)),
+			WholesalerProductsService: *services.NewWholesalerProductsService(repositories.NewWholesalerProductRepository(db)),
+			ProductService:            *services.NewProductService(repositories.NewProductRepository(db)),
+			CartService:               *services.NewCartService(repositories.NewCartRepo(db), repositories.NewUsersRepo(db)),
+			RetailerCartService:       *services.NewRetailerCartService(repositories.NewRetailerCartRepo(db), repositories.NewRetailersRepo(db)),
+			UserAddressesService:      *services.NewUserAddressesService(repositories.NewUserAddressesRepo(db), repositories.NewUsersRepo(db)),
+			UploadService:             services.NewUploadService(),
 		},
 	}
 

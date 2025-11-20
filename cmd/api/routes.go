@@ -5,21 +5,34 @@ import (
 	"Obsonarium-backend/internal/handlers/cart"
 	"Obsonarium-backend/internal/handlers/healthcheck"
 	"Obsonarium-backend/internal/handlers/product_handler"
+	"Obsonarium-backend/internal/handlers/retailer_cart"
 	"Obsonarium-backend/internal/handlers/retailer_products"
 	"Obsonarium-backend/internal/handlers/retailers"
 	"Obsonarium-backend/internal/handlers/upload_handler"
 	"Obsonarium-backend/internal/handlers/user_addresses"
 	"Obsonarium-backend/internal/handlers/wholesaler_product_handler"
+	"Obsonarium-backend/internal/handlers/wholesaler_products"
 	"Obsonarium-backend/internal/handlers/wholesalers"
 	"net/http"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/cors"
 )
 
 func (app *application) newRouter() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	
+	// CORS middleware to allow credentials (cookies)
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 
 	// File server for uploaded files
 	r.Handle("/api/uploads/*", http.StripPrefix("/api/uploads/", http.FileServer(http.Dir("./uploads"))))
@@ -30,6 +43,8 @@ func (app *application) newRouter() *chi.Mux {
 	r.Get("/api/logout/{provider}", auth.AuthLogout)
 	r.Get("/api/shop", retailer_products.GetProducts(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/shop/{id}", retailer_products.GetProduct(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
+	r.Get("/api/wholesale", wholesaler_products.GetProducts(&app.shared_deps.WholesalerProductsService, app.shared_deps.JSONutils.Writer))
+	r.Get("/api/wholesale/{id}", wholesaler_products.GetProduct(&app.shared_deps.WholesalerProductsService, app.shared_deps.JSONutils.Writer))
 
 	// Upload routes with retailer authentication middleware
 	r.Route("/api/upload", func(r chi.Router) {
@@ -60,6 +75,15 @@ func (app *application) newRouter() *chi.Mux {
 		r.Get("/number", cart.GetCartNumber(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
 		r.Post("/", cart.AddCartItem(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 		r.Delete("/{product_id}", cart.RemoveCartItem(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
+	})
+
+	// Retailer cart routes with retailer authentication middleware
+	r.Route("/api/retailer/cart", func(r chi.Router) {
+		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Get("/", retailer_cart.GetCart(&app.shared_deps.RetailerCartService, app.shared_deps.JSONutils.Writer))
+		r.Get("/number", retailer_cart.GetCartNumber(&app.shared_deps.RetailerCartService, app.shared_deps.JSONutils.Writer))
+		r.Post("/", retailer_cart.AddCartItem(&app.shared_deps.RetailerCartService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+		r.Delete("/{product_id}", retailer_cart.RemoveCartItem(&app.shared_deps.RetailerCartService, app.shared_deps.JSONutils.Writer))
 	})
 
 	// User addresses routes with consumer authentication middleware

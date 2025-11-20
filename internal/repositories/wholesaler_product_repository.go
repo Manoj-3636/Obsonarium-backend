@@ -9,6 +9,9 @@ import (
 var ErrWholesalerProductNotFound = errors.New("wholesaler product not found")
 
 type IWholesalerProductRepository interface {
+	GetProducts() ([]models.WholesalerProduct, error)
+	SearchProducts(keyword string) ([]models.WholesalerProduct, error)
+	GetProduct(id int) (*models.WholesalerProduct, error)
 	GetProductsByWholesalerID(wholesalerID int) ([]models.WholesalerProduct, error)
 	GetProductByIDForWholesaler(productID int, wholesalerID int) (*models.WholesalerProduct, error)
 	CreateProduct(product *models.WholesalerProduct) (*models.WholesalerProduct, error)
@@ -22,6 +25,116 @@ type WholesalerProductRepository struct {
 
 func NewWholesalerProductRepository(db *sql.DB) *WholesalerProductRepository {
 	return &WholesalerProductRepository{DB: db}
+}
+
+func (repo *WholesalerProductRepository) GetProducts() ([]models.WholesalerProduct, error) {
+	query := `
+		SELECT id, wholesaler_id, name, price, stock_qty, image_url, description
+		FROM wholesaler_products
+		ORDER BY updated_at DESC
+		LIMIT 9
+	`
+
+	rows, err := repo.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []models.WholesalerProduct
+
+	for rows.Next() {
+		var product models.WholesalerProduct
+		err := rows.Scan(
+			&product.Id,
+			&product.Wholesaler_id,
+			&product.Name,
+			&product.Price,
+			&product.Stock_qty,
+			&product.Image_url,
+			&product.Description,
+		)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, product)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return products, nil
+}
+
+func (repo *WholesalerProductRepository) SearchProducts(keyword string) ([]models.WholesalerProduct, error) {
+	query := `
+        SELECT id, wholesaler_id, name, price, stock_qty, image_url, description
+        FROM wholesaler_products
+        WHERE
+            to_tsvector('simple', name || ' ' || coalesce(description, ''))
+            @@ plainto_tsquery('simple', $1)
+        ORDER BY updated_at DESC
+        LIMIT 50;
+    `
+
+	rows, err := repo.DB.Query(query, keyword)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []models.WholesalerProduct
+
+	for rows.Next() {
+		var product models.WholesalerProduct
+		err := rows.Scan(
+			&product.Id,
+			&product.Wholesaler_id,
+			&product.Name,
+			&product.Price,
+			&product.Stock_qty,
+			&product.Image_url,
+			&product.Description,
+		)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, product)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return products, nil
+}
+
+func (repo *WholesalerProductRepository) GetProduct(id int) (*models.WholesalerProduct, error) {
+	query := `
+		SELECT id, wholesaler_id, name, price, stock_qty, image_url, description
+		FROM wholesaler_products
+		WHERE id = $1
+	`
+
+	var product models.WholesalerProduct
+	err := repo.DB.QueryRow(query, id).Scan(
+		&product.Id,
+		&product.Wholesaler_id,
+		&product.Name,
+		&product.Price,
+		&product.Stock_qty,
+		&product.Image_url,
+		&product.Description,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &models.WholesalerProduct{}, ErrWholesalerProductNotFound
+		}
+		return &models.WholesalerProduct{}, err
+	}
+
+	return &product, nil
 }
 
 func (repo *WholesalerProductRepository) GetProductsByWholesalerID(wholesalerID int) ([]models.WholesalerProduct, error) {
