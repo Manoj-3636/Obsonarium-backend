@@ -41,9 +41,9 @@ func TestRetailersRepo_GetRetailerByID(t *testing.T) {
 			name: "successful retrieval",
 			id:   1,
 			setupMock: func() {
-				rows := sqlmock.NewRows([]string{"id", "name", "email", "phone", "address"}).
-					AddRow(1, "Test Retailer", "test@retailer.com", "+1234567890", "123 Test St")
-				mock.ExpectQuery("SELECT id, name, email, phone, address").
+				rows := sqlmock.NewRows([]string{"id", "name", "business_name", "email", "phone", "address"}).
+					AddRow(1, "Test Retailer", nil, "test@retailer.com", "+1234567890", "123 Test St")
+				mock.ExpectQuery("SELECT id, name, business_name, email, phone, address").
 					WithArgs(1).
 					WillReturnRows(rows)
 			},
@@ -60,7 +60,7 @@ func TestRetailersRepo_GetRetailerByID(t *testing.T) {
 			name: "retailer not found",
 			id:   999,
 			setupMock: func() {
-				mock.ExpectQuery("SELECT id, name, email, phone, address").
+				mock.ExpectQuery("SELECT id, name, business_name, email, phone, address").
 					WithArgs(999).
 					WillReturnError(sql.ErrNoRows)
 			},

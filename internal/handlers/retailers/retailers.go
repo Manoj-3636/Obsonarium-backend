@@ -160,3 +160,38 @@ func UpdateCurrentRetailer(retailersService *services.RetailersService, writeJSO
 		}, http.StatusOK, nil)
 	}
 }
+
+// GetRetailerProducts gets all products for the current authenticated retailer
+func GetRetailerProducts(
+	retailersService *services.RetailersService,
+	productsService *services.RetailerProductsService,
+	writeJSON jsonutils.JSONwriter,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		email, ok := r.Context().Value(auth.UserEmailKey).(string)
+		if !ok || email == "" {
+			writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+			return
+		}
+
+		// Get retailer to get retailer_id
+		retailer, err := retailersService.GetRetailerByEmail(email)
+		if err != nil {
+			if errors.Is(err, repositories.ErrRetailerNotFound) {
+				writeJSON(w, jsonutils.Envelope{"error": "Retailer not found"}, http.StatusNotFound, nil)
+				return
+			}
+			writeJSON(w, jsonutils.Envelope{"error": "Failed to fetch retailer"}, http.StatusInternalServerError, nil)
+			return
+		}
+
+		// Get all products for this retailer
+		products, err := productsService.GetProductsByRetailerID(retailer.Id)
+		if err != nil {
+			writeJSON(w, jsonutils.Envelope{"error": "Failed to fetch products"}, http.StatusInternalServerError, nil)
+			return
+		}
+
+		writeJSON(w, jsonutils.Envelope{"products": products}, http.StatusOK, nil)
+	}
+}

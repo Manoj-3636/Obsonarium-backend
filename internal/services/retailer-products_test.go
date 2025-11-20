@@ -9,9 +9,10 @@ import (
 
 // MockRetailerProductsRepo is a mock implementation of IRetailerProductsRepo
 type MockRetailerProductsRepo struct {
-	GetProductsFunc    func() ([]models.RetailerProduct, error)
-	SearchProductsFunc func(keyword string) ([]models.RetailerProduct, error)
-	GetProductFunc     func(id int) (*models.RetailerProduct, error)
+	GetProductsFunc           func() ([]models.RetailerProduct, error)
+	SearchProductsFunc        func(keyword string) ([]models.RetailerProduct, error)
+	GetProductFunc            func(id int) (*models.RetailerProduct, error)
+	GetProductsByRetailerIDFunc func(retailerID int) ([]models.RetailerProduct, error)
 }
 
 func (m *MockRetailerProductsRepo) GetProducts() ([]models.RetailerProduct, error) {
@@ -31,6 +32,13 @@ func (m *MockRetailerProductsRepo) SearchProducts(keyword string) ([]models.Reta
 func (m *MockRetailerProductsRepo) GetProduct(id int) (*models.RetailerProduct, error) {
 	if m.GetProductFunc != nil {
 		return m.GetProductFunc(id)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockRetailerProductsRepo) GetProductsByRetailerID(retailerID int) ([]models.RetailerProduct, error) {
+	if m.GetProductsByRetailerIDFunc != nil {
+		return m.GetProductsByRetailerIDFunc(retailerID)
 	}
 	return nil, errors.New("not implemented")
 }

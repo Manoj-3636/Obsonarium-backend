@@ -54,11 +54,17 @@ func (app *application) newRouter() *chi.Mux {
 	// Retailer routes
 	r.Route("/api/retailers", func(r chi.Router) {
 		// Get current retailer profile and onboarding status (no onboarding required)
-		// specific routes like /me must come before /{id} to avoid being captured
+		// specific routes like /me and /products must come before /{id} to avoid being captured
 		r.Route("/me", func(r chi.Router) {
 			r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
 			r.Get("/", retailers.GetCurrentRetailer(&app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
 			r.Post("/", retailers.UpdateCurrentRetailer(&app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+		})
+
+		// Get products for current retailer (requires authentication)
+		r.Route("/products", func(r chi.Router) {
+			r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+			r.Get("/", retailers.GetRetailerProducts(&app.shared_deps.RetailersService, &app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
 		})
 
 		// Get retailer by ID

@@ -12,6 +12,7 @@ type IRetailerProductsRepo interface {
 	GetProducts() ([]models.RetailerProduct, error)
 	SearchProducts(keyword string) ([]models.RetailerProduct, error)
 	GetProduct(id int) (*models.RetailerProduct, error)
+	GetProductsByRetailerID(retailerID int) ([]models.RetailerProduct, error)
 }
 
 type RetailerProductsRepo struct {
@@ -133,4 +134,44 @@ func (repo *RetailerProductsRepo) GetProduct(id int) (*models.RetailerProduct, e
 	}
 
 	return &product, nil
+}
+
+func (repo *RetailerProductsRepo) GetProductsByRetailerID(retailerID int) ([]models.RetailerProduct, error) {
+	query := `
+		SELECT id, retailer_id, name, price, stock_qty, image_url, description
+		FROM retailer_products
+		WHERE retailer_id = $1
+		ORDER BY updated_at DESC
+	`
+
+	rows, err := repo.DB.Query(query, retailerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []models.RetailerProduct
+
+	for rows.Next() {
+		var product models.RetailerProduct
+		err := rows.Scan(
+			&product.Id,
+			&product.Retailer_id,
+			&product.Name,
+			&product.Price,
+			&product.Stock_qty,
+			&product.Image_url,
+			&product.Description,
+		)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, product)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return products, nil
 }

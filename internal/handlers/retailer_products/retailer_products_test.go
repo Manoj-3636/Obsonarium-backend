@@ -159,9 +159,10 @@ func TestGetProduct(t *testing.T) {
 
 // MockRetailerProductsRepoForTesting implements IRetailerProductsRepo
 type MockRetailerProductsRepoForTesting struct {
-	GetProductsFunc    func() ([]models.RetailerProduct, error)
-	SearchProductsFunc func(keyword string) ([]models.RetailerProduct, error)
-	GetProductFunc     func(id int) (*models.RetailerProduct, error)
+	GetProductsFunc             func() ([]models.RetailerProduct, error)
+	SearchProductsFunc          func(keyword string) ([]models.RetailerProduct, error)
+	GetProductFunc              func(id int) (*models.RetailerProduct, error)
+	GetProductsByRetailerIDFunc func(retailerID int) ([]models.RetailerProduct, error)
 }
 
 func (m *MockRetailerProductsRepoForTesting) GetProducts() ([]models.RetailerProduct, error) {
@@ -181,6 +182,13 @@ func (m *MockRetailerProductsRepoForTesting) SearchProducts(keyword string) ([]m
 func (m *MockRetailerProductsRepoForTesting) GetProduct(id int) (*models.RetailerProduct, error) {
 	if m.GetProductFunc != nil {
 		return m.GetProductFunc(id)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockRetailerProductsRepoForTesting) GetProductsByRetailerID(retailerID int) ([]models.RetailerProduct, error) {
+	if m.GetProductsByRetailerIDFunc != nil {
+		return m.GetProductsByRetailerIDFunc(retailerID)
 	}
 	return nil, errors.New("not implemented")
 }
