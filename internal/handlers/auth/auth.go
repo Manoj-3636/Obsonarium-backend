@@ -58,9 +58,13 @@ func NewAuth(logger zerolog.Logger, env string) {
 	retailerProvider := google.New(googleClientId, googleClientSecret, "http://localhost:5174/api/auth/google-retailer/callback", "email", "profile")
 	retailerProvider.SetName("google-retailer")
 
+	wholesalerProvider := google.New(googleClientId, googleClientSecret, "http://localhost:5175/api/auth/google-wholesaler/callback", "email", "profile")
+	wholesalerProvider.SetName("google-wholesaler")
+
 	goth.UseProviders(
 		consumerProvider,
 		retailerProvider,
+		wholesalerProvider,
 	)
 }
 
@@ -124,6 +128,42 @@ func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService, r
 
 			// Redirect to dashboard if onboarded
 			http.Redirect(w, r, "http://localhost:5174/dashboard", http.StatusFound)
+			return
+		}
+
+		if provider == "google-wholesaler" {
+			wholesaler := models.Wholesaler{
+				Email: gothUser.Email,
+				Name:  gothUser.Name,
+			}
+
+			err = authService.UpsertWholesaler(gothUser.Email, gothUser.Name)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to find or create wholesaler")
+				http.Error(w, "Failed to process wholesaler", http.StatusInternalServerError)
+				return
+			}
+
+			jwtString, err := authService.CreateWholesalerJWT(&wholesaler)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to create JWT")
+				http.Error(w, "Failed to create session", http.StatusInternalServerError)
+				return
+			}
+
+			cookie := &http.Cookie{
+				Name:     "jwt",
+				Value:    jwtString,
+				Expires:  time.Now().Add(7 * 24 * time.Hour),
+				Path:     "/",
+				HttpOnly: true,
+				Secure:   false,
+				SameSite: http.SameSiteLaxMode,
+			}
+			http.SetCookie(w, cookie)
+
+			// Redirect to wholesaler dashboard (assuming port 5175 for wholesaler frontend)
+			http.Redirect(w, r, "http://localhost:5175/dashboard", http.StatusFound)
 			return
 		}
 
@@ -305,6 +345,53 @@ func RequireRetailer(authService *services.AuthService, logger zerolog.Logger, w
 			role, ok := (*claims)["role"].(string)
 			if !ok || role != "retailer" {
 				logger.Debug().Str("role", role).Msg("Invalid role for retailer endpoint")
+				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+				return
+			}
+
+			// Extract email from claims
+			email, ok := (*claims)["sub"].(string)
+			if !ok || email == "" {
+				// Invalid claims, return 401 Unauthorized
+				logger.Debug().Msg("Invalid email in JWT claims")
+				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+				return
+			}
+
+			// Add email to request context and continue
+			ctx := context.WithValue(r.Context(), UserEmailKey, email)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// RequireWholesaler is a middleware that checks authentication status and verifies the user has "wholesaler" role
+// If authentication fails or role is not "wholesaler", it returns 401 Unauthorized and stops the request
+func RequireWholesaler(authService *services.AuthService, logger zerolog.Logger, writeJSON jsonutils.JSONwriter) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Extract JWT token from cookie
+			cookie, err := r.Cookie("jwt")
+			if err != nil {
+				// No cookie found, return 401 Unauthorized
+				logger.Debug().Msg("No JWT cookie found")
+				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+				return
+			}
+
+			// Verify the token
+			claims, err := authService.VerifySelfToken(cookie.Value)
+			if err != nil {
+				// Token invalid or expired, return 401 Unauthorized
+				logger.Debug().Err(err).Msg("JWT verification failed")
+				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+				return
+			}
+
+			// Check role is "wholesaler"
+			role, ok := (*claims)["role"].(string)
+			if !ok || role != "wholesaler" {
+				logger.Debug().Str("role", role).Msg("Invalid role for wholesaler endpoint")
 				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
 				return
 			}

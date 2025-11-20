@@ -35,13 +35,38 @@ func (m *MockUsersRepo) UpsertUser(user *models.User) error {
 	return errors.New("not implemented")
 }
 
+// MockWholesalersRepo is a mock implementation of IWholesalersRepo
+type MockWholesalersRepo struct {
+	UpsertWholesalerFunc func(wholesaler *models.Wholesaler) error
+}
+
+func (m *MockWholesalersRepo) GetWholesalerByID(id int) (*models.Wholesaler, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockWholesalersRepo) UpsertWholesaler(wholesaler *models.Wholesaler) error {
+	if m.UpsertWholesalerFunc != nil {
+		return m.UpsertWholesalerFunc(wholesaler)
+	}
+	return errors.New("not implemented")
+}
+
+func (m *MockWholesalersRepo) GetWholesalerByEmail(email string) (*models.Wholesaler, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockWholesalersRepo) UpdateWholesaler(wholesaler *models.Wholesaler) error {
+	return errors.New("not implemented")
+}
+
 func TestNewAuthService(t *testing.T) {
 	os.Setenv("LOCOSYNC_SIGNING", "test-key")
 	defer os.Unsetenv("LOCOSYNC_SIGNING")
 
 	mockRepo := &MockUsersRepo{}
 	mockRetailersRepo := &MockRetailersRepo{}
-	service := NewAuthService(mockRepo, mockRetailersRepo)
+	mockWholesalersRepo := &MockWholesalersRepo{}
+	service := NewAuthService(mockRepo, mockRetailersRepo, mockWholesalersRepo)
 
 	if service == nil {
 		t.Fatal("NewAuthService returned nil")
@@ -60,7 +85,8 @@ func TestAuthService_CreateJWT(t *testing.T) {
 
 	mockRepo := &MockUsersRepo{}
 	mockRetailersRepo := &MockRetailersRepo{}
-	service := NewAuthService(mockRepo, mockRetailersRepo)
+	mockWholesalersRepo := &MockWholesalersRepo{}
+	service := NewAuthService(mockRepo, mockRetailersRepo, mockWholesalersRepo)
 
 	user := &models.User{
 		Id:    1,
@@ -110,7 +136,8 @@ func TestAuthService_VerifySelfToken(t *testing.T) {
 
 	mockRepo := &MockUsersRepo{}
 	mockRetailersRepo := &MockRetailersRepo{}
-	service := NewAuthService(mockRepo, mockRetailersRepo)
+	mockWholesalersRepo := &MockWholesalersRepo{}
+	service := NewAuthService(mockRepo, mockRetailersRepo, mockWholesalersRepo)
 
 	user := &models.User{
 		Email: "test@example.com",
@@ -143,7 +170,8 @@ func TestAuthService_VerifySelfToken_Expired(t *testing.T) {
 
 	mockRepo := &MockUsersRepo{}
 	mockRetailersRepo := &MockRetailersRepo{}
-	service := NewAuthService(mockRepo, mockRetailersRepo)
+	mockWholesalersRepo := &MockWholesalersRepo{}
+	service := NewAuthService(mockRepo, mockRetailersRepo, mockWholesalersRepo)
 
 	// Create an expired token
 	claims := jwt.MapClaims{
@@ -185,7 +213,8 @@ func TestAuthService_UpsertUser(t *testing.T) {
 		}
 
 		mockRetailersRepo := &MockRetailersRepo{}
-		service := NewAuthService(mockRepo, mockRetailersRepo)
+		mockWholesalersRepo := &MockWholesalersRepo{}
+		service := NewAuthService(mockRepo, mockRetailersRepo, mockWholesalersRepo)
 		err := service.UpsertUser("test@example.com", "Test User", "https://example.com/pfp.jpg")
 		if err != nil {
 			t.Errorf("UpsertUser returned error: %v", err)
@@ -200,7 +229,8 @@ func TestAuthService_UpsertUser(t *testing.T) {
 		}
 
 		mockRetailersRepo := &MockRetailersRepo{}
-		service := NewAuthService(mockRepo, mockRetailersRepo)
+		mockWholesalersRepo := &MockWholesalersRepo{}
+		service := NewAuthService(mockRepo, mockRetailersRepo, mockWholesalersRepo)
 		err := service.UpsertUser("test@example.com", "Test User", "https://example.com/pfp.jpg")
 		if err == nil {
 			t.Fatal("Expected error from UpsertUser, got nil")

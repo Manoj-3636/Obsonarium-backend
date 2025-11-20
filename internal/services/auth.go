@@ -21,16 +21,18 @@ var (
 )
 
 type AuthService struct {
-	selfSigningKey string
-	usersRepo      repositories.IUsersRepo
-	retailersRepo  repositories.IRetailersRepo
+	selfSigningKey  string
+	usersRepo       repositories.IUsersRepo
+	retailersRepo   repositories.IRetailersRepo
+	wholesalersRepo repositories.IWholesalersRepo
 }
 
-func NewAuthService(usersRepo repositories.IUsersRepo, retailersRepo repositories.IRetailersRepo) *AuthService {
+func NewAuthService(usersRepo repositories.IUsersRepo, retailersRepo repositories.IRetailersRepo, wholesalersRepo repositories.IWholesalersRepo) *AuthService {
 	return &AuthService{
-		selfSigningKey: os.Getenv("LOCOSYNC_SIGNING"),
-		usersRepo:      usersRepo,
-		retailersRepo:  retailersRepo,
+		selfSigningKey:  os.Getenv("LOCOSYNC_SIGNING"),
+		usersRepo:       usersRepo,
+		retailersRepo:   retailersRepo,
+		wholesalersRepo: wholesalersRepo,
 	}
 }
 
@@ -131,6 +133,39 @@ func (authService *AuthService) CreateRetailerJWT(retailer *models.Retailer) (st
 	claims := jwt.MapClaims{
 		"sub":  retailer.Email,
 		"role": "retailer",
+		"exp":  time.Now().Add(7 * 24 * time.Hour).Unix(), // expires in 7 days
+		"iat":  time.Now().Unix(),                         // issued at
+		"iss":  "Obsonarium",
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	self_token, err := token.SignedString([]byte(authService.selfSigningKey))
+
+	if err != nil {
+		return "", fmt.Errorf("%w,%w", ErrSelfTokenCreate, err)
+	}
+
+	return self_token, nil
+}
+
+func (authService *AuthService) UpsertWholesaler(email, name string) error {
+	wholesaler := models.Wholesaler{
+		Email: email,
+		Name:  name,
+	}
+	err := authService.wholesalersRepo.UpsertWholesaler(&wholesaler)
+
+	if err != nil {
+		return fmt.Errorf("service error finding or creating wholesaler: %w", err)
+	}
+
+	return nil
+}
+
+func (authService *AuthService) CreateWholesalerJWT(wholesaler *models.Wholesaler) (string, error) {
+	claims := jwt.MapClaims{
+		"sub":  wholesaler.Email,
+		"role": "wholesaler",
 		"exp":  time.Now().Add(7 * 24 * time.Hour).Unix(), // expires in 7 days
 		"iat":  time.Now().Unix(),                         // issued at
 		"iss":  "Obsonarium",
