@@ -9,6 +9,7 @@ import (
 	"Obsonarium-backend/internal/handlers/retailers"
 	"Obsonarium-backend/internal/handlers/upload_handler"
 	"Obsonarium-backend/internal/handlers/user_addresses"
+	"Obsonarium-backend/internal/handlers/wholesaler_product_handler"
 	"Obsonarium-backend/internal/handlers/wholesalers"
 	"net/http"
 
@@ -33,6 +34,12 @@ func (app *application) newRouter() *chi.Mux {
 	// Upload routes with retailer authentication middleware
 	r.Route("/api/upload", func(r chi.Router) {
 		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Post("/product-image", upload_handler.UploadProductImage(app.shared_deps.UploadService, app.shared_deps.JSONutils.Writer))
+	})
+
+	// Upload routes with wholesaler authentication middleware
+	r.Route("/api/upload/wholesaler", func(r chi.Router) {
+		r.Use(auth.RequireWholesaler(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
 		r.Post("/product-image", upload_handler.UploadProductImage(app.shared_deps.UploadService, app.shared_deps.JSONutils.Writer))
 	})
 
@@ -89,6 +96,16 @@ func (app *application) newRouter() *chi.Mux {
 
 		// Get wholesaler by ID
 		r.Get("/{id}", wholesalers.GetWholesaler(&app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer))
+	})
+
+	// Wholesaler product management routes
+	r.Route("/api/wholesaler/products", func(r chi.Router) {
+		r.Use(auth.RequireWholesaler(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Get("/", wholesaler_product_handler.ListWholesalerProducts(&app.shared_deps.WholesalerProductService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer))
+		r.Post("/", wholesaler_product_handler.CreateProduct(&app.shared_deps.WholesalerProductService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+		r.Get("/{id}", wholesaler_product_handler.GetWholesalerProduct(&app.shared_deps.WholesalerProductService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer))
+		r.Put("/{id}", wholesaler_product_handler.UpdateProduct(&app.shared_deps.WholesalerProductService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+		r.Delete("/{id}", wholesaler_product_handler.DeleteProduct(&app.shared_deps.WholesalerProductService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer))
 	})
 
 	return r
