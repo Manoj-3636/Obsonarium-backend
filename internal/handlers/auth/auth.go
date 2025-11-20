@@ -68,7 +68,7 @@ func NewAuth(logger zerolog.Logger, env string) {
 	)
 }
 
-func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService, retailersService *services.RetailersService) http.HandlerFunc {
+func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService, retailersService *services.RetailersService, wholesalersService *services.WholesalersService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		provider := chi.URLParam(r, "provider")
 		r = r.WithContext(context.WithValue(r.Context(), "provider", provider))
@@ -162,7 +162,22 @@ func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService, r
 			}
 			http.SetCookie(w, cookie)
 
-			// Redirect to wholesaler dashboard (assuming port 5175 for wholesaler frontend)
+			// Check onboarding status and redirect accordingly
+			onboarded, err := wholesalersService.IsOnboarded(gothUser.Email)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to check onboarding status")
+				// Still redirect to home, frontend will handle it
+				http.Redirect(w, r, "http://localhost:5175", http.StatusFound)
+				return
+			}
+
+			if !onboarded {
+				// Redirect to onboarding page
+				http.Redirect(w, r, "http://localhost:5175/onboarding", http.StatusFound)
+				return
+			}
+
+			// Redirect to dashboard if onboarded
 			http.Redirect(w, r, "http://localhost:5175/dashboard", http.StatusFound)
 			return
 		}

@@ -9,6 +9,7 @@ import (
 	"Obsonarium-backend/internal/handlers/retailers"
 	"Obsonarium-backend/internal/handlers/upload_handler"
 	"Obsonarium-backend/internal/handlers/user_addresses"
+	"Obsonarium-backend/internal/handlers/wholesalers"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -23,7 +24,7 @@ func (app *application) newRouter() *chi.Mux {
 	r.Handle("/api/uploads/*", http.StripPrefix("/api/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	r.Get("/api/healthcheck", healthcheck.NewHealthCheckHandler(app.config.Env, app.shared_deps.JSONutils.Writer))
-	r.Get("/api/auth/{provider}/callback", auth.NewAuthCallback(app.shared_deps.logger, &app.shared_deps.AuthService, &app.shared_deps.RetailersService))
+	r.Get("/api/auth/{provider}/callback", auth.NewAuthCallback(app.shared_deps.logger, &app.shared_deps.AuthService, &app.shared_deps.RetailersService, &app.shared_deps.WholesalersService))
 	r.Get("/api/auth/{provider}", auth.AuthProvider)
 	r.Get("/api/logout/{provider}", auth.AuthLogout)
 	r.Get("/api/shop", retailer_products.GetProducts(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
@@ -74,6 +75,20 @@ func (app *application) newRouter() *chi.Mux {
 
 		// Get retailer by ID
 		r.Get("/{id}", retailers.GetRetailer(&app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
+	})
+
+	// Wholesaler routes
+	r.Route("/api/wholesalers", func(r chi.Router) {
+		// Get current wholesaler profile and onboarding status (no onboarding required)
+		// specific routes like /me must come before /{id} to avoid being captured
+		r.Route("/me", func(r chi.Router) {
+			r.Use(auth.RequireWholesaler(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+			r.Get("/", wholesalers.GetCurrentWholesaler(&app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer))
+			r.Post("/", wholesalers.UpdateCurrentWholesaler(&app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+		})
+
+		// Get wholesaler by ID
+		r.Get("/{id}", wholesalers.GetWholesaler(&app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer))
 	})
 
 	return r
