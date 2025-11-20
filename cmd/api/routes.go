@@ -17,28 +17,41 @@ func (app *application) newRouter() *chi.Mux {
 	r.Use(middleware.Logger)
 
 	r.Get("/api/healthcheck", healthcheck.NewHealthCheckHandler(app.config.Env, app.shared_deps.JSONutils.Writer))
-	r.Get("/api/auth/{provider}/callback", auth.NewAuthCallback(app.shared_deps.logger, &app.shared_deps.AuthService))
+	r.Get("/api/auth/{provider}/callback", auth.NewAuthCallback(app.shared_deps.logger, &app.shared_deps.AuthService, &app.shared_deps.RetailersService))
 	r.Get("/api/auth/{provider}", auth.AuthProvider)
 	r.Get("/api/logout/{provider}", auth.AuthLogout)
 	r.Get("/api/shop", retailer_products.GetProducts(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/shop/{id}", retailer_products.GetProduct(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
-	r.Get("/api/retailers/{id}", retailers.GetRetailer(&app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
 
-	// Cart routes with authentication middleware
+	// Cart routes with consumer authentication middleware
 	r.Route("/api/cart", func(r chi.Router) {
-		r.Use(auth.RequireAuth(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Use(auth.RequireConsumer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
 		r.Get("/", cart.GetCart(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
 		r.Get("/number", cart.GetCartNumber(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
 		r.Post("/", cart.AddCartItem(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 		r.Delete("/{product_id}", cart.RemoveCartItem(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
 	})
 
-	// User addresses routes with authentication middleware
+	// User addresses routes with consumer authentication middleware
 	r.Route("/api/addresses", func(r chi.Router) {
-		r.Use(auth.RequireAuth(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Use(auth.RequireConsumer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
 		r.Get("/", user_addresses.GetAddresses(&app.shared_deps.UserAddressesService, app.shared_deps.JSONutils.Writer))
 		r.Post("/", user_addresses.AddAddress(&app.shared_deps.UserAddressesService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 		r.Delete("/{id}", user_addresses.RemoveAddress(&app.shared_deps.UserAddressesService, app.shared_deps.JSONutils.Writer))
+	})
+
+	// Retailer routes
+	r.Route("/api/retailers", func(r chi.Router) {
+		// Get current retailer profile and onboarding status (no onboarding required)
+		// specific routes like /me must come before /{id} to avoid being captured
+		r.Route("/me", func(r chi.Router) {
+			r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+			r.Get("/", retailers.GetCurrentRetailer(&app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
+			r.Post("/", retailers.UpdateCurrentRetailer(&app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+		})
+
+		// Get retailer by ID
+		r.Get("/{id}", retailers.GetRetailer(&app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
 	})
 
 	return r

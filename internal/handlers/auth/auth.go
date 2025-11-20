@@ -54,7 +54,7 @@ func NewAuth(logger zerolog.Logger, env string) {
 	gothic.Store = store
 
 	consumerProvider := google.New(googleClientId, googleClientSecret, "http://localhost:5173/api/auth/google/callback", "email", "profile")
-	
+
 	retailerProvider := google.New(googleClientId, googleClientSecret, "http://localhost:5174/api/auth/google-retailer/callback", "email", "profile")
 	retailerProvider.SetName("google-retailer")
 
@@ -64,7 +64,7 @@ func NewAuth(logger zerolog.Logger, env string) {
 	)
 }
 
-func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService) http.HandlerFunc {
+func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService, retailersService *services.RetailersService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		provider := chi.URLParam(r, "provider")
 		r = r.WithContext(context.WithValue(r.Context(), "provider", provider))
@@ -107,8 +107,23 @@ func NewAuthCallback(logger zerolog.Logger, authService *services.AuthService) h
 			}
 			http.SetCookie(w, cookie)
 
-			// Redirect to retailer home
-			http.Redirect(w, r, "http://localhost:5174", http.StatusFound)
+			// Check onboarding status and redirect accordingly
+			onboarded, err := retailersService.IsOnboarded(gothUser.Email)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to check onboarding status")
+				// Still redirect to home, frontend will handle it
+				http.Redirect(w, r, "http://localhost:5174", http.StatusFound)
+				return
+			}
+
+			if !onboarded {
+				// Redirect to onboarding page
+				http.Redirect(w, r, "http://localhost:5174/onboarding", http.StatusFound)
+				return
+			}
+
+			// Redirect to dashboard if onboarded
+			http.Redirect(w, r, "http://localhost:5174/dashboard", http.StatusFound)
 			return
 		}
 
@@ -168,7 +183,57 @@ func AuthProvider(w http.ResponseWriter, r *http.Request) {
 
 // RequireAuth is a middleware that checks authentication status and adds user email to context
 // If authentication fails, it returns 401 Unauthorized and stops the request
-func RequireAuth(authService *services.AuthService, logger zerolog.Logger, writeJSON jsonutils.JSONwriter) func(http.Handler) http.Handler {
+// DEPRECATED: Use RequireConsumer or RequireRetailer instead for role-based access control
+// func RequireAuth(authService *services.AuthService, logger zerolog.Logger, writeJSON jsonutils.JSONwriter) func(http.Handler) http.Handler {
+// 	return func(next http.Handler) http.Handler {
+// 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 			// Extract JWT token from cookie
+// 			cookie, err := r.Cookie("jwt")
+// 			if err != nil {
+// 				// No cookie found, return 401 Unauthorized
+// 				logger.Debug().Msg("No JWT cookie found")
+// 				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+// 				return
+// 			}
+
+// 			// Verify the token
+// 			claims, err := authService.VerifySelfToken(cookie.Value)
+// 			if err != nil {
+// 				// Token invalid or expired, return 401 Unauthorized
+// 				logger.Debug().Err(err).Msg("JWT verification failed")
+// 				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+// 				return
+// 			}
+
+// 			// Extract email from claims
+// 			email, ok := (*claims)["sub"].(string)
+// 			if !ok || email == "" {
+// 				// Invalid claims, return 401 Unauthorized
+// 				logger.Debug().Msg("Invalid email in JWT claims")
+// 				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+// 				return
+// 			}
+
+// 			// Add email to request context and continue
+// 			ctx := context.WithValue(r.Context(), UserEmailKey, email)
+// 			next.ServeHTTP(w, r.WithContext(ctx))
+// 		})
+// 	}
+// }
+
+// GetUserEmailFromContext extracts the user email from the request context
+// Returns empty string if not found
+func GetUserEmailFromContext(r *http.Request) string {
+	email, ok := r.Context().Value(UserEmailKey).(string)
+	if !ok {
+		return ""
+	}
+	return email
+}
+
+// RequireConsumer is a middleware that checks authentication status and verifies the user has "consumer" role
+// If authentication fails or role is not "consumer", it returns 401 Unauthorized and stops the request
+func RequireConsumer(authService *services.AuthService, logger zerolog.Logger, writeJSON jsonutils.JSONwriter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Extract JWT token from cookie
@@ -189,6 +254,14 @@ func RequireAuth(authService *services.AuthService, logger zerolog.Logger, write
 				return
 			}
 
+			// Check role is "consumer"
+			role, ok := (*claims)["role"].(string)
+			if !ok || role != "consumer" {
+				logger.Debug().Str("role", role).Msg("Invalid role for consumer endpoint")
+				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+				return
+			}
+
 			// Extract email from claims
 			email, ok := (*claims)["sub"].(string)
 			if !ok || email == "" {
@@ -205,12 +278,84 @@ func RequireAuth(authService *services.AuthService, logger zerolog.Logger, write
 	}
 }
 
-// GetUserEmailFromContext extracts the user email from the request context
-// Returns empty string if not found
-func GetUserEmailFromContext(r *http.Request) string {
-	email, ok := r.Context().Value(UserEmailKey).(string)
-	if !ok {
-		return ""
+// RequireRetailer is a middleware that checks authentication status and verifies the user has "retailer" role
+// If authentication fails or role is not "retailer", it returns 401 Unauthorized and stops the request
+func RequireRetailer(authService *services.AuthService, logger zerolog.Logger, writeJSON jsonutils.JSONwriter) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Extract JWT token from cookie
+			cookie, err := r.Cookie("jwt")
+			if err != nil {
+				// No cookie found, return 401 Unauthorized
+				logger.Debug().Msg("No JWT cookie found")
+				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+				return
+			}
+
+			// Verify the token
+			claims, err := authService.VerifySelfToken(cookie.Value)
+			if err != nil {
+				// Token invalid or expired, return 401 Unauthorized
+				logger.Debug().Err(err).Msg("JWT verification failed")
+				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+				return
+			}
+
+			// Check role is "retailer"
+			role, ok := (*claims)["role"].(string)
+			if !ok || role != "retailer" {
+				logger.Debug().Str("role", role).Msg("Invalid role for retailer endpoint")
+				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+				return
+			}
+
+			// Extract email from claims
+			email, ok := (*claims)["sub"].(string)
+			if !ok || email == "" {
+				// Invalid claims, return 401 Unauthorized
+				logger.Debug().Msg("Invalid email in JWT claims")
+				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+				return
+			}
+
+			// Add email to request context and continue
+			ctx := context.WithValue(r.Context(), UserEmailKey, email)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
-	return email
+}
+
+// RequireOnboardedRetailer is a middleware that checks if the retailer has completed onboarding
+// It must be used after RequireRetailer middleware
+// If onboarding is not complete, it returns 403 Forbidden with onboarding status
+func RequireOnboardedRetailer(retailersService *services.RetailersService, logger zerolog.Logger, writeJSON jsonutils.JSONwriter) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			email, ok := r.Context().Value(UserEmailKey).(string)
+			if !ok || email == "" {
+				logger.Debug().Msg("No email in context for onboarding check")
+				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+				return
+			}
+
+			onboarded, err := retailersService.IsOnboarded(email)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to check onboarding status")
+				writeJSON(w, jsonutils.Envelope{"error": "Failed to check onboarding status"}, http.StatusInternalServerError, nil)
+				return
+			}
+
+			if !onboarded {
+				logger.Debug().Str("email", email).Msg("Retailer not onboarded")
+				writeJSON(w, jsonutils.Envelope{
+					"error":     "Onboarding required",
+					"onboarded": false,
+				}, http.StatusForbidden, nil)
+				return
+			}
+
+			// Onboarding complete, continue
+			next.ServeHTTP(w, r)
+		})
+	}
 }

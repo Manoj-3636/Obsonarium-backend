@@ -25,21 +25,27 @@ func NewRetailersRepo(db *sql.DB) *RetailersRepo {
 
 func (repo *RetailersRepo) GetRetailerByID(id int) (*models.Retailer, error) {
 	query := `
-		SELECT id, name, email, phone, address
+		SELECT id, name, business_name, email, phone, address
 		FROM retailers
 		WHERE id = $1`
 
 	var retailer models.Retailer
+	var businessName sql.NullString
 
 	row := repo.DB.QueryRow(query, id)
 
 	err := row.Scan(
 		&retailer.Id,
 		&retailer.Name,
+		&businessName,
 		&retailer.Email,
 		&retailer.Phone,
 		&retailer.Address,
 	)
+
+	if businessName.Valid {
+		retailer.BusinessName = businessName.String
+	}
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -58,14 +64,15 @@ func (repo *RetailersRepo) UpsertRetailer(retailer *models.Retailer) error {
         ON CONFLICT (email) DO UPDATE
         SET 
             name = EXCLUDED.name
-        RETURNING id, email, name, phone, address
+        RETURNING id, email, name, business_name, phone, address
     `
 
-	// Note: Phone and Address are not updated here as they come from onboarding/profile update
+	// Note: Phone, Address, and BusinessName are not updated here as they come from onboarding/profile update
 	// and are not provided by Google Auth.
 
 	var phone sql.NullString
 	var address sql.NullString
+	var businessName sql.NullString
 
 	err := repo.DB.QueryRow(
 		query,
@@ -75,10 +82,14 @@ func (repo *RetailersRepo) UpsertRetailer(retailer *models.Retailer) error {
 		&retailer.Id,
 		&retailer.Email,
 		&retailer.Name,
+		&businessName,
 		&phone,
 		&address,
 	)
 
+	if businessName.Valid {
+		retailer.BusinessName = businessName.String
+	}
 	if phone.Valid {
 		retailer.Phone = phone.String
 	}
@@ -91,24 +102,29 @@ func (repo *RetailersRepo) UpsertRetailer(retailer *models.Retailer) error {
 
 func (repo *RetailersRepo) GetRetailerByEmail(email string) (*models.Retailer, error) {
 	query := `
-		SELECT id, name, email, phone, address
+		SELECT id, name, business_name, email, phone, address
 		FROM retailers
 		WHERE email = $1`
 
 	var retailer models.Retailer
 	var phone sql.NullString
 	var address sql.NullString
+	var businessName sql.NullString
 
 	row := repo.DB.QueryRow(query, email)
 
 	err := row.Scan(
 		&retailer.Id,
 		&retailer.Name,
+		&businessName,
 		&retailer.Email,
 		&phone,
 		&address,
 	)
 
+	if businessName.Valid {
+		retailer.BusinessName = businessName.String
+	}
 	if phone.Valid {
 		retailer.Phone = phone.String
 	}
@@ -129,13 +145,15 @@ func (repo *RetailersRepo) GetRetailerByEmail(email string) (*models.Retailer, e
 func (repo *RetailersRepo) UpdateRetailer(retailer *models.Retailer) error {
 	query := `
 		UPDATE retailers
-		SET name = $1, phone = $2, address = $3
+		SET business_name = $1, phone = $2, address = $3
 		WHERE email = $4
 		RETURNING id`
 
+	// Note: name is not updated here - it only comes from Google OAuth during login
+
 	err := repo.DB.QueryRow(
 		query,
-		retailer.Name,
+		retailer.BusinessName,
 		retailer.Phone,
 		retailer.Address,
 		retailer.Email,
@@ -150,4 +168,3 @@ func (repo *RetailersRepo) UpdateRetailer(retailer *models.Retailer) error {
 
 	return nil
 }
-
