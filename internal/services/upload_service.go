@@ -67,7 +67,6 @@ func (s *UploadService) SaveProductImage(file multipart.File, header *multipart.
 	}
 
 	// Return public URL
-	publicURL := fmt.Sprintf("/uploads/products/%s", filename)
+	publicURL := fmt.Sprintf("/api/uploads/products/%s", filename)
 	return publicURL, nil
 }
-

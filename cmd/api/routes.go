@@ -4,6 +4,7 @@ import (
 	"Obsonarium-backend/internal/handlers/auth"
 	"Obsonarium-backend/internal/handlers/cart"
 	"Obsonarium-backend/internal/handlers/healthcheck"
+	"Obsonarium-backend/internal/handlers/product_handler"
 	"Obsonarium-backend/internal/handlers/retailer_products"
 	"Obsonarium-backend/internal/handlers/retailers"
 	"Obsonarium-backend/internal/handlers/upload_handler"
@@ -19,7 +20,7 @@ func (app *application) newRouter() *chi.Mux {
 	r.Use(middleware.Logger)
 
 	// File server for uploaded files
-	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+	r.Handle("/api/uploads/*", http.StripPrefix("/api/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	r.Get("/api/healthcheck", healthcheck.NewHealthCheckHandler(app.config.Env, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/auth/{provider}/callback", auth.NewAuthCallback(app.shared_deps.logger, &app.shared_deps.AuthService, &app.shared_deps.RetailersService))
@@ -32,6 +33,16 @@ func (app *application) newRouter() *chi.Mux {
 	r.Route("/api/upload", func(r chi.Router) {
 		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
 		r.Post("/product-image", upload_handler.UploadProductImage(app.shared_deps.UploadService, app.shared_deps.JSONutils.Writer))
+	})
+
+	// Retailer product management routes
+	r.Route("/api/retailer/products", func(r chi.Router) {
+		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Get("/", product_handler.ListRetailerProducts(&app.shared_deps.ProductService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
+		r.Post("/", product_handler.CreateProduct(&app.shared_deps.ProductService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+		r.Get("/{id}", product_handler.GetRetailerProduct(&app.shared_deps.ProductService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
+		r.Put("/{id}", product_handler.UpdateProduct(&app.shared_deps.ProductService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+		r.Delete("/{id}", product_handler.DeleteProduct(&app.shared_deps.ProductService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
 	})
 
 	// Cart routes with consumer authentication middleware
@@ -59,12 +70,6 @@ func (app *application) newRouter() *chi.Mux {
 			r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
 			r.Get("/", retailers.GetCurrentRetailer(&app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
 			r.Post("/", retailers.UpdateCurrentRetailer(&app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
-		})
-
-		// Get products for current retailer (requires authentication)
-		r.Route("/products", func(r chi.Router) {
-			r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
-			r.Get("/", retailers.GetRetailerProducts(&app.shared_deps.RetailersService, &app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
 		})
 
 		// Get retailer by ID

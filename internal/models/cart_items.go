@@ -1,9 +1,9 @@
 package models
 
 type CartItem struct {
-	Id         int
-	User_id    int
-	Product_id int
-	Quantity   int
-	Product    RetailerProduct
+	Id         int             `json:"id"`
+	User_id    int             `json:"user_id"`
+	Product_id int             `json:"product_id"`
+	Quantity   int             `json:"quantity"`
+	Product    RetailerProduct `json:"product"`
 }

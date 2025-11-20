@@ -1,10 +1,8 @@
 package models
 
-
 type User struct {
-	Id int
-	Email string
-	Name string
-	Pfp_url string
+	Id      int    `json:"id"`
+	Email   string `json:"email"`
+	Name    string `json:"name"`
+	Pfp_url string `json:"pfp_url"`
 }
-
