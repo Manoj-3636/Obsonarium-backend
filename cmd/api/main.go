@@ -39,10 +39,14 @@ type dependencies struct {
 	CartService               services.CartService
 	RetailerCartService       services.RetailerCartService
 	UserAddressesService      services.UserAddressesService
+	RetailerAddressesService  services.RetailerAddressesService
 	ProductReviewsService     services.ProductReviewsService
 	ProductQueriesService     services.ProductQueriesService
 	UploadService             *services.UploadService
 	UsersRepo                 repositories.IUsersRepo
+	OrdersRepo                repositories.IOrdersRepo
+	StripeService             *services.StripeService
+	OrdersService             services.OrdersService
 }
 
 type application struct {
@@ -90,10 +94,14 @@ func main() {
 			CartService:               *services.NewCartService(repositories.NewCartRepo(db), repositories.NewUsersRepo(db)),
 			RetailerCartService:       *services.NewRetailerCartService(repositories.NewRetailerCartRepo(db), repositories.NewRetailersRepo(db)),
 			UserAddressesService:      *services.NewUserAddressesService(repositories.NewUserAddressesRepo(db), repositories.NewUsersRepo(db)),
+			RetailerAddressesService:  *services.NewRetailerAddressesService(repositories.NewRetailerAddressesRepo(db), repositories.NewRetailersRepo(db)),
 			ProductReviewsService:     *services.NewProductReviewsService(repositories.NewProductReviewsRepo(db)),
 			ProductQueriesService:     *services.NewProductQueriesService(repositories.NewProductQueriesRepo(db), repositories.NewUsersRepo(db), services.NewEmailService(os.Getenv("MAILTRAP_API_TOKEN"))),
 			UploadService:             services.NewUploadService(),
 			UsersRepo:                 repositories.NewUsersRepo(db),
+			OrdersRepo:                repositories.NewOrdersRepo(db),
+			StripeService:             services.NewStripeService(os.Getenv("STRIPE_SECRET_KEY")),
+			OrdersService:             *services.NewOrdersService(repositories.NewOrdersRepo(db), *services.NewCartService(repositories.NewCartRepo(db), repositories.NewUsersRepo(db)), *services.NewRetailerCartService(repositories.NewRetailerCartRepo(db), repositories.NewRetailersRepo(db)), services.NewStripeService(os.Getenv("STRIPE_SECRET_KEY")), services.NewEmailService(os.Getenv("MAILTRAP_API_TOKEN")), repositories.NewUsersRepo(db), repositories.NewRetailersRepo(db)),
 		},
 	}
 

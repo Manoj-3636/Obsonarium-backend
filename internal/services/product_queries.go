@@ -69,10 +69,12 @@ func (s *ProductQueriesService) ResolveQuery(queryID int, responseText string) (
 
 	// Send email notification
 	subject := fmt.Sprintf("Query resolved : %s", resolvedQuery.Query_text)
-	body := fmt.Sprintf("Dear customer,\n%s", resolvedQuery.Response_text)
-
+	
+	var body string
 	if resolvedQuery.Response_text != nil {
 		body = fmt.Sprintf("Dear customer,\n%s", *resolvedQuery.Response_text)
+	} else {
+		body = "Dear customer,\nYour query has been resolved."
 	}
 
 	fmt.Println("ProductQueriesService: Attempting to send email...")

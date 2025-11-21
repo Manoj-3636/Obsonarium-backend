@@ -32,6 +32,14 @@ func (s *RetailerCartService) GetCartItemsByEmail(email string) ([]models.Retail
 	return cartItems, nil
 }
 
+func (s *RetailerCartService) GetCartItemsByRetailerID(retailerID int) ([]models.RetailerCartItem, error) {
+	cartItems, err := s.cartRepo.GetCartItemsByRetailerID(retailerID)
+	if err != nil {
+		return nil, fmt.Errorf("service error fetching cart items: %w", err)
+	}
+	return cartItems, nil
+}
+
 func (s *RetailerCartService) AddCartItem(email string, productID int, quantity int) (int, error) {
 	retailer, err := s.retailersRepo.GetRetailerByEmail(email)
 	if err != nil {

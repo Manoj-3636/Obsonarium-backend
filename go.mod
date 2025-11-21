@@ -12,6 +12,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/markbates/goth v1.82.0
 	github.com/rs/zerolog v1.34.0
+	github.com/stripe/stripe-go/v79 v79.12.0
 )
 
 require (

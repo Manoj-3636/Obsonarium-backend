@@ -4,9 +4,11 @@ import (
 	"Obsonarium-backend/internal/handlers/auth"
 	"Obsonarium-backend/internal/handlers/cart"
 	"Obsonarium-backend/internal/handlers/healthcheck"
+	"Obsonarium-backend/internal/handlers/orders"
 	"Obsonarium-backend/internal/handlers/product_handler"
 	"Obsonarium-backend/internal/handlers/product_queries"
 	"Obsonarium-backend/internal/handlers/product_reviews"
+	"Obsonarium-backend/internal/handlers/retailer_addresses"
 	"Obsonarium-backend/internal/handlers/retailer_cart"
 	"Obsonarium-backend/internal/handlers/retailer_products"
 	"Obsonarium-backend/internal/handlers/retailers"
@@ -117,6 +119,14 @@ func (app *application) newRouter() *chi.Mux {
 		r.Delete("/{id}", user_addresses.RemoveAddress(&app.shared_deps.UserAddressesService, app.shared_deps.JSONutils.Writer))
 	})
 
+	// Retailer addresses routes with retailer authentication middleware
+	r.Route("/api/retailer/addresses", func(r chi.Router) {
+		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Get("/", retailer_addresses.GetAddresses(&app.shared_deps.RetailerAddressesService, app.shared_deps.JSONutils.Writer))
+		r.Post("/", retailer_addresses.AddAddress(&app.shared_deps.RetailerAddressesService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+		r.Delete("/{id}", retailer_addresses.RemoveAddress(&app.shared_deps.RetailerAddressesService, app.shared_deps.JSONutils.Writer))
+	})
+
 	// Retailer routes
 	r.Route("/api/retailers", func(r chi.Router) {
 		// Get current retailer profile and onboarding status (no onboarding required)
@@ -154,6 +164,20 @@ func (app *application) newRouter() *chi.Mux {
 		r.Put("/{id}", wholesaler_product_handler.UpdateProduct(&app.shared_deps.WholesalerProductService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 		r.Delete("/{id}", wholesaler_product_handler.DeleteProduct(&app.shared_deps.WholesalerProductService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer))
 	})
+
+	// Checkout routes
+	r.Route("/api/checkout", func(r chi.Router) {
+		r.Use(auth.RequireConsumer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Post("/", orders.NewOrdersHandler(&app.shared_deps.OrdersService, app.shared_deps.JSONutils).CreateConsumerCheckout)
+	})
+
+	r.Route("/api/retailer/checkout", func(r chi.Router) {
+		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Post("/", orders.NewOrdersHandler(&app.shared_deps.OrdersService, app.shared_deps.JSONutils).CreateRetailerCheckout)
+	})
+
+	// Webhook route
+	r.Post("/api/webhook", orders.NewOrdersHandler(&app.shared_deps.OrdersService, app.shared_deps.JSONutils).HandleStripeWebhook)
 
 	return r
 }

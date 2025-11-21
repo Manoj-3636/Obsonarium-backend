@@ -18,12 +18,20 @@ func contains(s, substr string) bool {
 // MockUsersRepo is a mock implementation of IUsersRepo
 type MockUsersRepo struct {
 	GetUserByEmailFunc func(email string) (*models.User, error)
+	GetUserByIDFunc    func(id int) (*models.User, error)
 	UpsertUserFunc     func(user *models.User) error
 }
 
 func (m *MockUsersRepo) GetUserByEmail(email string) (*models.User, error) {
 	if m.GetUserByEmailFunc != nil {
 		return m.GetUserByEmailFunc(email)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockUsersRepo) GetUserByID(id int) (*models.User, error) {
+	if m.GetUserByIDFunc != nil {
+		return m.GetUserByIDFunc(id)
 	}
 	return nil, errors.New("not implemented")
 }
