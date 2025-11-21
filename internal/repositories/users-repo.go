@@ -11,6 +11,7 @@ var ErrUserNotFound = errors.New("user not found")
 type IUsersRepo interface {
 	UpsertUser(*models.User) error
 	GetUserByEmail(string) (*models.User, error)
+	GetUserByID(int) (*models.User, error)
 	// CreateOrGet(string,string,string) (*models.User, error)
 }
 
@@ -52,6 +53,33 @@ func (repo *UsersRepo) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
 
 	row := repo.DB.QueryRow(query, email)
+
+	err := row.Scan(
+		&user.Id,
+		&user.Email,
+		&user.Name,
+		&user.Pfp_url,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &models.User{}, ErrUserNotFound
+		}
+		return &models.User{}, err
+	}
+
+	return &user, nil
+}
+
+func (repo *UsersRepo) GetUserByID(id int) (*models.User, error) {
+	query := `
+		SELECT id, email, name, profile_picture_url 
+		FROM users 
+		WHERE id = $1`
+
+	var user models.User
+
+	row := repo.DB.QueryRow(query, id)
 
 	err := row.Scan(
 		&user.Id,

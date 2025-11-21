@@ -20,8 +20,8 @@ import (
 // MockUserAddressesRepoForTesting implements IUserAddressesRepo
 type MockUserAddressesRepoForTesting struct {
 	GetAddressesByUserIDFunc func(userID int) ([]models.UserAddress, error)
-	AddAddressFunc            func(address *models.UserAddress) error
-	RemoveAddressFunc         func(userID int, addressID int) error
+	AddAddressFunc           func(address *models.UserAddress) error
+	RemoveAddressFunc        func(userID int, addressID int) error
 }
 
 func (m *MockUserAddressesRepoForTesting) GetAddressesByUserID(userID int) ([]models.UserAddress, error) {
@@ -63,6 +63,10 @@ func (m *MockUsersRepoForTesting) UpsertUser(user *models.User) error {
 		return m.UpsertUserFunc(user)
 	}
 	return errors.New("not implemented")
+}
+
+func (m *MockUsersRepoForTesting) GetUserByID(id int) (*models.User, error) {
+	return &models.User{Id: id, Email: "test@example.com"}, nil
 }
 
 func createRequestWithEmail(email string) *http.Request {
@@ -258,4 +262,3 @@ func TestRemoveAddress(t *testing.T) {
 		})
 	}
 }
-

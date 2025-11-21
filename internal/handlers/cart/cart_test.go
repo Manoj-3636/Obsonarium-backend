@@ -16,7 +16,7 @@ import (
 
 // MockCartServiceForTesting wraps the service for testing
 type MockCartServiceForTesting struct {
-	GetCartItemsByEmailFunc func(email string) ([]models.CartItem, error)
+	GetCartItemsByEmailFunc  func(email string) ([]models.CartItem, error)
 	AddCartItemFunc          func(email string, productID int, quantity int) (int, error)
 	RemoveCartItemFunc       func(email string, productID int) error
 	GetCartNumberByEmailFunc func(email string) (int, error)
@@ -101,6 +101,10 @@ func (m *MockUsersRepoForTesting) UpsertUser(user *models.User) error {
 	return nil
 }
 
+func (m *MockUsersRepoForTesting) GetUserByID(id int) (*models.User, error) {
+	return &models.User{Id: id, Email: "test@example.com"}, nil
+}
+
 func TestAddCartItem(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -109,9 +113,9 @@ func TestAddCartItem(t *testing.T) {
 		expectedStatus int
 	}{
 		{
-			name:  "unauthorized",
-			email: "",
-			body:  map[string]interface{}{"product_id": 1, "quantity": 1},
+			name:           "unauthorized",
+			email:          "",
+			body:           map[string]interface{}{"product_id": 1, "quantity": 1},
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{

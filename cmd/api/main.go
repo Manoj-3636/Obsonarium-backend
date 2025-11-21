@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 )
 
@@ -50,6 +51,12 @@ type application struct {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		// It's okay if .env doesn't exist in production if env vars are set otherwise
+		fmt.Println("Error loading .env file")
+	}
+
 	var cfg config
 	flag.IntVar(&cfg.port, "port", 8000, "API server port")
 	flag.StringVar(&cfg.Env, "env", "prod", "Environment (development|staging|production)")
@@ -84,7 +91,7 @@ func main() {
 			RetailerCartService:       *services.NewRetailerCartService(repositories.NewRetailerCartRepo(db), repositories.NewRetailersRepo(db)),
 			UserAddressesService:      *services.NewUserAddressesService(repositories.NewUserAddressesRepo(db), repositories.NewUsersRepo(db)),
 			ProductReviewsService:     *services.NewProductReviewsService(repositories.NewProductReviewsRepo(db)),
-			ProductQueriesService:     *services.NewProductQueriesService(repositories.NewProductQueriesRepo(db)),
+			ProductQueriesService:     *services.NewProductQueriesService(repositories.NewProductQueriesRepo(db), repositories.NewUsersRepo(db), services.NewEmailService(os.Getenv("MAILTRAP_API_TOKEN"))),
 			UploadService:             services.NewUploadService(),
 			UsersRepo:                 repositories.NewUsersRepo(db),
 		},
