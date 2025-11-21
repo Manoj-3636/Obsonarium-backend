@@ -5,6 +5,7 @@ import (
 	"Obsonarium-backend/internal/handlers/cart"
 	"Obsonarium-backend/internal/handlers/healthcheck"
 	"Obsonarium-backend/internal/handlers/product_handler"
+	"Obsonarium-backend/internal/handlers/product_reviews"
 	"Obsonarium-backend/internal/handlers/retailer_cart"
 	"Obsonarium-backend/internal/handlers/retailer_products"
 	"Obsonarium-backend/internal/handlers/retailers"
@@ -23,7 +24,7 @@ import (
 func (app *application) newRouter() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-	
+
 	// CORS middleware to allow credentials (cookies)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"},
@@ -45,6 +46,14 @@ func (app *application) newRouter() *chi.Mux {
 	r.Get("/api/shop/{id}", retailer_products.GetProduct(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/wholesale", wholesaler_products.GetProducts(&app.shared_deps.WholesalerProductsService, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/wholesale/{id}", wholesaler_products.GetProduct(&app.shared_deps.WholesalerProductsService, app.shared_deps.JSONutils.Writer))
+
+	// Product reviews routes
+	r.Route("/api/products/{product_id}/reviews", func(r chi.Router) {
+		// Public GET endpoint (no auth required)
+		r.Get("/", product_reviews.GetReviews(&app.shared_deps.ProductReviewsService, app.shared_deps.JSONutils.Writer))
+		// Protected POST endpoint (requires consumer auth)
+		r.With(auth.RequireConsumer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer)).Post("/", product_reviews.CreateReview(&app.shared_deps.ProductReviewsService, app.shared_deps.UsersRepo, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+	})
 
 	// Upload routes with retailer authentication middleware
 	r.Route("/api/upload", func(r chi.Router) {
