@@ -39,6 +39,7 @@ type dependencies struct {
 	RetailerCartService       services.RetailerCartService
 	UserAddressesService      services.UserAddressesService
 	ProductReviewsService     services.ProductReviewsService
+	ProductQueriesService     services.ProductQueriesService
 	UploadService             *services.UploadService
 	UsersRepo                 repositories.IUsersRepo
 }
@@ -83,6 +84,7 @@ func main() {
 			RetailerCartService:       *services.NewRetailerCartService(repositories.NewRetailerCartRepo(db), repositories.NewRetailersRepo(db)),
 			UserAddressesService:      *services.NewUserAddressesService(repositories.NewUserAddressesRepo(db), repositories.NewUsersRepo(db)),
 			ProductReviewsService:     *services.NewProductReviewsService(repositories.NewProductReviewsRepo(db)),
+			ProductQueriesService:     *services.NewProductQueriesService(repositories.NewProductQueriesRepo(db)),
 			UploadService:             services.NewUploadService(),
 			UsersRepo:                 repositories.NewUsersRepo(db),
 		},

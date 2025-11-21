@@ -5,6 +5,7 @@ import (
 	"Obsonarium-backend/internal/handlers/cart"
 	"Obsonarium-backend/internal/handlers/healthcheck"
 	"Obsonarium-backend/internal/handlers/product_handler"
+	"Obsonarium-backend/internal/handlers/product_queries"
 	"Obsonarium-backend/internal/handlers/product_reviews"
 	"Obsonarium-backend/internal/handlers/retailer_cart"
 	"Obsonarium-backend/internal/handlers/retailer_products"
@@ -53,6 +54,19 @@ func (app *application) newRouter() *chi.Mux {
 		r.Get("/", product_reviews.GetReviews(&app.shared_deps.ProductReviewsService, app.shared_deps.JSONutils.Writer))
 		// Protected POST endpoint (requires consumer auth)
 		r.With(auth.RequireConsumer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer)).Post("/", product_reviews.CreateReview(&app.shared_deps.ProductReviewsService, app.shared_deps.UsersRepo, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+	})
+
+	// Product queries routes
+	r.Route("/api/products/{product_id}/queries", func(r chi.Router) {
+		// Protected POST endpoint (requires consumer auth)
+		r.With(auth.RequireConsumer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer)).Post("/", product_queries.PostQuery(&app.shared_deps.ProductQueriesService, app.shared_deps.UsersRepo, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+	})
+
+	// Retailer queries routes
+	r.Route("/api/retailer/queries", func(r chi.Router) {
+		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Get("/", product_queries.GetQueries(&app.shared_deps.ProductQueriesService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
+		r.Post("/{query_id}/resolve", product_queries.ResolveQuery(&app.shared_deps.ProductQueriesService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 	})
 
 	// Upload routes with retailer authentication middleware
