@@ -94,10 +94,11 @@ func CreateReview(
 		}
 
 		review := &models.ProductReview{
-			Product_id: productID,
-			User_id:    user.Id,
-			Rating:     req.Rating,
-			Comment:    req.Comment,
+			Product_id:    productID,
+			User_id:       user.Id,
+			Reviewer_name: user.Name,
+			Rating:        req.Rating,
+			Comment:       req.Comment,
 		}
 
 		createdReview, err := reviewsService.CreateReview(review)
@@ -105,6 +106,9 @@ func CreateReview(
 			writeJSON(w, jsonutils.Envelope{"error": "Failed to create review"}, http.StatusInternalServerError, nil)
 			return
 		}
+
+		// Populate reviewer_name from user data
+		createdReview.Reviewer_name = user.Name
 
 		writeJSON(w, jsonutils.Envelope{"review": createdReview}, http.StatusCreated, nil)
 	}

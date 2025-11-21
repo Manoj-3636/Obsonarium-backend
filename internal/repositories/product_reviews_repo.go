@@ -23,10 +23,11 @@ func NewProductReviewsRepo(db *sql.DB) *ProductReviewsRepo {
 
 func (repo *ProductReviewsRepo) GetReviewsByProductID(productID int) ([]models.ProductReview, error) {
 	query := `
-		SELECT id, product_id, user_id, rating, comment, created_at, updated_at
-		FROM product_reviews
-		WHERE product_id = $1
-		ORDER BY created_at DESC
+		SELECT r.id, r.product_id, r.user_id, COALESCE(u.name, 'Anonymous') as reviewer_name, r.rating, r.comment, r.created_at, r.updated_at
+		FROM product_reviews r
+		LEFT JOIN users u ON u.id = r.user_id
+		WHERE r.product_id = $1
+		ORDER BY r.created_at DESC
 	`
 
 	rows, err := repo.DB.Query(query, productID)
@@ -43,6 +44,7 @@ func (repo *ProductReviewsRepo) GetReviewsByProductID(productID int) ([]models.P
 			&review.Id,
 			&review.Product_id,
 			&review.User_id,
+			&review.Reviewer_name,
 			&review.Rating,
 			&review.Comment,
 			&review.Created_at,
