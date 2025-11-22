@@ -8,12 +8,16 @@ import (
 )
 
 type ConsumerOrdersService struct {
-	OrdersRepo *repositories.ConsumerOrdersRepository
+	OrdersRepo   *repositories.ConsumerOrdersRepository
+	UsersRepo    repositories.IUsersRepo
+	EmailService *EmailService
 }
 
-func NewConsumerOrdersService(ordersRepo *repositories.ConsumerOrdersRepository) *ConsumerOrdersService {
+func NewConsumerOrdersService(ordersRepo *repositories.ConsumerOrdersRepository, usersRepo repositories.IUsersRepo, emailService *EmailService) *ConsumerOrdersService {
 	return &ConsumerOrdersService{
-		OrdersRepo: ordersRepo,
+		OrdersRepo:   ordersRepo,
+		UsersRepo:    usersRepo,
+		EmailService: emailService,
 	}
 }
 
@@ -54,9 +58,40 @@ func (s *ConsumerOrdersService) UpdateOrderItemStatus(itemID int, retailerID int
 		return errors.New("cannot set status to pending - it is the initial state only")
 	}
 
-	err := s.OrdersRepo.UpdateOrderItemStatus(itemID, retailerID, status)
+	orderID, consumerID, productName, err := s.OrdersRepo.UpdateOrderItemStatus(itemID, retailerID, status)
 	if err != nil {
 		return fmt.Errorf("failed to update order item status: %w", err)
+	}
+
+	// Send email notification to consumer
+	if s.EmailService != nil && s.UsersRepo != nil {
+		user, err := s.UsersRepo.GetUserByID(consumerID)
+		if err != nil {
+			// Log error but don't fail the status update
+			fmt.Printf("failed to fetch user for email notification: %v\n", err)
+		} else {
+			statusText := map[string]string{
+				"accepted":  "Accepted",
+				"rejected":  "Rejected",
+				"shipped":   "Shipped",
+				"delivered": "Delivered",
+			}
+			statusDisplay := statusText[status]
+			if statusDisplay == "" {
+				statusDisplay = status
+			}
+
+			subject := fmt.Sprintf("Order #%d Status Update", orderID)
+			body := fmt.Sprintf("Dear customer,\n\nYour order #%d has been updated.\n\nProduct: %s\nNew Status: %s\n\nThank you for shopping with us!", orderID, productName, statusDisplay)
+
+			err = s.EmailService.SendEmail(user.Email, subject, body)
+			if err != nil {
+				// Log error but don't fail the status update
+				fmt.Printf("failed to send email notification: %v\n", err)
+			} else {
+				fmt.Printf("Email notification sent to consumer %s for order #%d status update\n", user.Email, orderID)
+			}
+		}
 	}
 
 	return nil

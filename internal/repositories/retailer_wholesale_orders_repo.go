@@ -196,25 +196,26 @@ func (r *RetailerWholesaleOrdersRepository) GetActiveOrderItemsByOrderID(orderID
 }
 
 // UpdateOrderItemStatus updates the status of an order item
-func (r *RetailerWholesaleOrdersRepository) UpdateOrderItemStatus(itemID int, wholesalerID int, status string) error {
-	// Verify the item belongs to a product from this wholesaler
+// Returns orderID, retailerID, and product name for email notification
+func (r *RetailerWholesaleOrdersRepository) UpdateOrderItemStatus(itemID int, wholesalerID int, status string) (orderID int, retailerID int, productName string, err error) {
+	// Verify the item belongs to a product from this wholesaler and get order info
 	query := `
 		UPDATE retailer_wholesale_order_items rwoi
 		SET status = $1
-		FROM wholesaler_products wp
+		FROM wholesaler_products wp, retailer_wholesale_orders rwo
 		WHERE rwoi.id = $2 
 			AND rwoi.product_id = wp.id 
 			AND wp.wholesaler_id = $3
-		RETURNING rwoi.id
+			AND rwoi.order_id = rwo.id
+		RETURNING rwoi.order_id, rwo.retailer_id, wp.name
 	`
 
-	var updatedID int
-	err := r.DB.QueryRow(query, status, itemID, wholesalerID).Scan(&updatedID)
+	err = r.DB.QueryRow(query, status, itemID, wholesalerID).Scan(&orderID, &retailerID, &productName)
 	if err == sql.ErrNoRows {
-		return fmt.Errorf("order item not found or does not belong to this wholesaler")
+		return 0, 0, "", fmt.Errorf("order item not found or does not belong to this wholesaler")
 	}
 	if err != nil {
-		return fmt.Errorf("failed to update order item status: %w", err)
+		return 0, 0, "", fmt.Errorf("failed to update order item status: %w", err)
 	}
 
 	// If marking as delivered for offline payment, update payment status
@@ -225,33 +226,25 @@ func (r *RetailerWholesaleOrdersRepository) UpdateOrderItemStatus(itemID int, wh
 			FROM retailer_wholesale_order_items rwoi
 			INNER JOIN retailer_wholesale_orders rwo ON rwo.id = rwoi.order_id
 			INNER JOIN wholesaler_products wp ON wp.id = rwoi.product_id
-			WHERE rwo.id = (
-				SELECT rwoi2.order_id 
-				FROM retailer_wholesale_order_items rwoi2 
-				WHERE rwoi2.id = $1
-			)
+			WHERE rwo.id = $1
 			AND wp.wholesaler_id = $2
 			AND rwoi.status != 'delivered'
 		`
 		var remainingCount int
-		err := r.DB.QueryRow(checkQuery, itemID, wholesalerID).Scan(&remainingCount)
+		err := r.DB.QueryRow(checkQuery, orderID, wholesalerID).Scan(&remainingCount)
 		if err == nil && remainingCount == 0 {
 			// All items delivered, update payment status if offline
 			updatePaymentQuery := `
 				UPDATE retailer_wholesale_orders
 				SET payment_status = 'success', updated_at = NOW()
-				WHERE id = (
-					SELECT rwoi2.order_id 
-					FROM retailer_wholesale_order_items rwoi2 
-					WHERE rwoi2.id = $1
-				)
+				WHERE id = $1
 				AND payment_method = 'offline'
 			`
-			_, _ = r.DB.Exec(updatePaymentQuery, itemID)
+			_, _ = r.DB.Exec(updatePaymentQuery, orderID)
 		}
 	}
 
-	return nil
+	return orderID, retailerID, productName, nil
 }
 
 // GetOrderItemsByOrderID gets all order items for a specific order, filtered by wholesaler

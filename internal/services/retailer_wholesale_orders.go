@@ -8,12 +8,16 @@ import (
 )
 
 type RetailerWholesaleOrdersService struct {
-	OrdersRepo *repositories.RetailerWholesaleOrdersRepository
+	OrdersRepo    *repositories.RetailerWholesaleOrdersRepository
+	RetailersRepo repositories.IRetailersRepo
+	EmailService  *EmailService
 }
 
-func NewRetailerWholesaleOrdersService(ordersRepo *repositories.RetailerWholesaleOrdersRepository) *RetailerWholesaleOrdersService {
+func NewRetailerWholesaleOrdersService(ordersRepo *repositories.RetailerWholesaleOrdersRepository, retailersRepo repositories.IRetailersRepo, emailService *EmailService) *RetailerWholesaleOrdersService {
 	return &RetailerWholesaleOrdersService{
-		OrdersRepo: ordersRepo,
+		OrdersRepo:    ordersRepo,
+		RetailersRepo: retailersRepo,
+		EmailService:  emailService,
 	}
 }
 
@@ -63,9 +67,40 @@ func (s *RetailerWholesaleOrdersService) UpdateOrderItemStatus(itemID int, whole
 		return errors.New("cannot set status to pending - it is the initial state only")
 	}
 
-	err := s.OrdersRepo.UpdateOrderItemStatus(itemID, wholesalerID, status)
+	orderID, retailerID, productName, err := s.OrdersRepo.UpdateOrderItemStatus(itemID, wholesalerID, status)
 	if err != nil {
 		return fmt.Errorf("failed to update order item status: %w", err)
+	}
+
+	// Send email notification to retailer
+	if s.EmailService != nil && s.RetailersRepo != nil {
+		retailer, err := s.RetailersRepo.GetRetailerByID(retailerID)
+		if err != nil {
+			// Log error but don't fail the status update
+			fmt.Printf("failed to fetch retailer for email notification: %v\n", err)
+		} else {
+			statusText := map[string]string{
+				"accepted":  "Accepted",
+				"rejected":  "Rejected",
+				"shipped":   "Shipped",
+				"delivered": "Delivered",
+			}
+			statusDisplay := statusText[status]
+			if statusDisplay == "" {
+				statusDisplay = status
+			}
+
+			subject := fmt.Sprintf("Order #%d Status Update", orderID)
+			body := fmt.Sprintf("Dear retailer,\n\nYour wholesale order #%d has been updated.\n\nProduct: %s\nNew Status: %s\n\nThank you for your business!", orderID, productName, statusDisplay)
+
+			err = s.EmailService.SendEmail(retailer.Email, subject, body)
+			if err != nil {
+				// Log error but don't fail the status update
+				fmt.Printf("failed to send email notification: %v\n", err)
+			} else {
+				fmt.Printf("Email notification sent to retailer %s for order #%d status update\n", retailer.Email, orderID)
+			}
+		}
 	}
 
 	return nil

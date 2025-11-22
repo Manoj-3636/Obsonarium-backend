@@ -200,28 +200,55 @@ func (r *ConsumerOrdersRepository) GetActiveOrderItemsByOrderID(orderID int, ret
 }
 
 // UpdateOrderItemStatus updates the status of an order item
-func (r *ConsumerOrdersRepository) UpdateOrderItemStatus(itemID int, retailerID int, status string) error {
-	// Verify the item belongs to a product from this retailer
+// Returns orderID, consumerID, and product name for email notification
+func (r *ConsumerOrdersRepository) UpdateOrderItemStatus(itemID int, retailerID int, status string) (orderID int, consumerID int, productName string, err error) {
+	// Verify the item belongs to a product from this retailer and get order info
 	query := `
 		UPDATE consumer_order_items coi
 		SET status = $1
-		FROM retailer_products rp
+		FROM retailer_products rp, consumer_orders co
 		WHERE coi.id = $2 
 			AND coi.product_id = rp.id 
 			AND rp.retailer_id = $3
-		RETURNING coi.id
+			AND coi.order_id = co.id
+		RETURNING coi.order_id, co.consumer_id, rp.name
 	`
 
-	var updatedID int
-	err := r.DB.QueryRow(query, status, itemID, retailerID).Scan(&updatedID)
+	err = r.DB.QueryRow(query, status, itemID, retailerID).Scan(&orderID, &consumerID, &productName)
 	if err == sql.ErrNoRows {
-		return fmt.Errorf("order item not found or does not belong to this retailer")
+		return 0, 0, "", fmt.Errorf("order item not found or does not belong to this retailer")
 	}
 	if err != nil {
-		return fmt.Errorf("failed to update order item status: %w", err)
+		return 0, 0, "", fmt.Errorf("failed to update order item status: %w", err)
 	}
 
-	return nil
+	// If marking as delivered for offline payment, update payment status
+	if status == "delivered" {
+		// Check if all items in the order are delivered
+		checkQuery := `
+			SELECT COUNT(*) 
+			FROM consumer_order_items coi
+			INNER JOIN consumer_orders co ON co.id = coi.order_id
+			INNER JOIN retailer_products rp ON rp.id = coi.product_id
+			WHERE co.id = $1
+			AND rp.retailer_id = $2
+			AND coi.status != 'delivered'
+		`
+		var remainingCount int
+		err := r.DB.QueryRow(checkQuery, orderID, retailerID).Scan(&remainingCount)
+		if err == nil && remainingCount == 0 {
+			// All items delivered, update payment status if offline
+			updatePaymentQuery := `
+				UPDATE consumer_orders
+				SET payment_status = 'success', updated_at = NOW()
+				WHERE id = $1
+				AND payment_method = 'offline'
+			`
+			_, _ = r.DB.Exec(updatePaymentQuery, orderID)
+		}
+	}
+
+	return orderID, consumerID, productName, nil
 }
 
 // GetOrderItemsByOrderID gets all order items for a specific order, filtered by retailer
