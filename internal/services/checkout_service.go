@@ -10,12 +10,14 @@ import (
 type CheckoutService struct {
 	OrdersRepo   *repositories.ConsumerOrdersRepository
 	ProductsRepo *repositories.RetailerProductsRepo
+	CartRepo     repositories.ICartRepo
 }
 
-func NewCheckoutService(ordersRepo *repositories.ConsumerOrdersRepository, productsRepo *repositories.RetailerProductsRepo) *CheckoutService {
+func NewCheckoutService(ordersRepo *repositories.ConsumerOrdersRepository, productsRepo *repositories.RetailerProductsRepo, cartRepo repositories.ICartRepo) *CheckoutService {
 	return &CheckoutService{
 		OrdersRepo:   ordersRepo,
 		ProductsRepo: productsRepo,
+		CartRepo:     cartRepo,
 	}
 }
 
@@ -67,6 +69,14 @@ func (s *CheckoutService) ProcessCheckout(ctx context.Context, userID int, req C
 	createdOrder, err := s.OrdersRepo.CreateOrder(ctx, order, orderItems)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order: %w", err)
+	}
+
+	// Clear the user's cart after successful order creation
+	err = s.CartRepo.ClearCart(userID)
+	if err != nil {
+		// Log the error but don't fail the order creation
+		// The order was already created successfully
+		return createdOrder, fmt.Errorf("order created but failed to clear cart: %w", err)
 	}
 
 	return createdOrder, nil
