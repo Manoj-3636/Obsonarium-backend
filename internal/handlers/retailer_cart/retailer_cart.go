@@ -110,3 +110,40 @@ func GetCartNumber(cartService *services.RetailerCartService, writeJSON jsonutil
 		writeJSON(w, jsonutils.Envelope{"count": count}, http.StatusOK, nil)
 	}
 }
+
+func ValidateCartStock(cartService *services.RetailerCartService, writeJSON jsonutils.JSONwriter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		email := auth.GetUserEmailFromContext(r)
+		if email == "" {
+			writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+			return
+		}
+
+		validationErrors, err := cartService.ValidateCartStock(email)
+		if err != nil {
+			writeJSON(w, jsonutils.Envelope{"error": "Failed to validate cart stock"}, http.StatusInternalServerError, nil)
+			return
+		}
+
+		if len(validationErrors) > 0 {
+			// Convert errors to a more frontend-friendly format
+			errors := make([]map[string]interface{}, len(validationErrors))
+			for i, ve := range validationErrors {
+				errors[i] = map[string]interface{}{
+					"product_id":   ve.ProductID,
+					"product_name": ve.ProductName,
+					"requested":    ve.Requested,
+					"available":    ve.Available,
+					"message":      ve.Error(),
+				}
+			}
+			writeJSON(w, jsonutils.Envelope{
+				"valid":  false,
+				"errors": errors,
+			}, http.StatusBadRequest, nil)
+			return
+		}
+
+		writeJSON(w, jsonutils.Envelope{"valid": true}, http.StatusOK, nil)
+	}
+}

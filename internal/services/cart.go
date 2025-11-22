@@ -7,14 +7,16 @@ import (
 )
 
 type CartService struct {
-	cartRepo  repositories.ICartRepo
-	usersRepo repositories.IUsersRepo
+	cartRepo     repositories.ICartRepo
+	usersRepo    repositories.IUsersRepo
+	productsRepo repositories.IRetailerProductsRepo
 }
 
-func NewCartService(cartRepo repositories.ICartRepo, usersRepo repositories.IUsersRepo) *CartService {
+func NewCartService(cartRepo repositories.ICartRepo, usersRepo repositories.IUsersRepo, productsRepo repositories.IRetailerProductsRepo) *CartService {
 	return &CartService{
-		cartRepo:  cartRepo,
-		usersRepo: usersRepo,
+		cartRepo:     cartRepo,
+		usersRepo:    usersRepo,
+		productsRepo: productsRepo,
 	}
 }
 
@@ -90,4 +92,49 @@ func (s *CartService) ClearCartByUserID(userID int) error {
 		return fmt.Errorf("service error clearing cart: %w", err)
 	}
 	return nil
+}
+
+type StockValidationError struct {
+	ProductID   int
+	ProductName string
+	Requested   int
+	Available   int
+}
+
+func (e *StockValidationError) Error() string {
+	return fmt.Sprintf("insufficient stock for %s (requested: %d, available: %d)", e.ProductName, e.Requested, e.Available)
+}
+
+// ValidateCartStock validates that all cart items have sufficient stock
+func (s *CartService) ValidateCartStock(email string) ([]StockValidationError, error) {
+	user, err := s.usersRepo.GetUserByEmail(email)
+	if err != nil {
+		return nil, fmt.Errorf("service error fetching user: %w", err)
+	}
+
+	cartItems, err := s.cartRepo.GetCartItemsByUserID(user.Id)
+	if err != nil {
+		return nil, fmt.Errorf("service error fetching cart items: %w", err)
+	}
+
+	var validationErrors []StockValidationError
+
+	for _, item := range cartItems {
+		product, err := s.productsRepo.GetProduct(item.Product_id)
+		if err != nil {
+			// If product not found, skip it (will be caught during checkout)
+			continue
+		}
+
+		if item.Quantity > product.Stock_qty {
+			validationErrors = append(validationErrors, StockValidationError{
+				ProductID:   item.Product_id,
+				ProductName: product.Name,
+				Requested:   item.Quantity,
+				Available:   product.Stock_qty,
+			})
+		}
+	}
+
+	return validationErrors, nil
 }

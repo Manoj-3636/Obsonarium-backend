@@ -51,11 +51,16 @@ func (s *RetailerCheckoutService) ProcessCheckout(ctx context.Context, retailerI
 	var totalAmount float64
 	var orderItems []models.RetailerWholesaleOrderItem
 
-	// Validate items and calculate total
+	// Validate items, check stock, and calculate total
 	for _, item := range req.CartItems {
 		product, err := s.ProductsRepo.GetProduct(item.ProductID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get product %d: %w", item.ProductID, err)
+		}
+
+		// Check stock availability
+		if product.Stock_qty < item.Quantity {
+			return nil, fmt.Errorf("insufficient stock for product %s (available: %d, requested: %d)", product.Name, product.Stock_qty, item.Quantity)
 		}
 
 		lineTotal := product.Price * float64(item.Quantity)
@@ -83,6 +88,16 @@ func (s *RetailerCheckoutService) ProcessCheckout(ctx context.Context, retailerI
 			return nil, fmt.Errorf("failed to create order: %w", err)
 		}
 
+		// Update stock for each product in the order
+		for _, item := range orderItems {
+			err := s.ProductsRepo.DecrementStock(item.ProductID, item.Qty)
+			if err != nil {
+				// Log the error but don't fail the order creation
+				// The order is already created, so we'll handle stock issues separately
+				fmt.Printf("Warning: Failed to decrement stock for product %d: %v\n", item.ProductID, err)
+			}
+		}
+
 		// Clear the retailer's cart after successful order creation
 		err = s.CartRepo.ClearCart(retailerID)
 		if err != nil {
@@ -105,6 +120,16 @@ func (s *RetailerCheckoutService) ProcessCheckout(ctx context.Context, retailerI
 		createdOrder, err := s.OrdersRepo.CreateOrder(ctx, order, orderItems)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create order: %w", err)
+		}
+
+		// Update stock for each product in the order
+		for _, item := range orderItems {
+			err := s.ProductsRepo.DecrementStock(item.ProductID, item.Qty)
+			if err != nil {
+				// Log the error but don't fail the order creation
+				// The order is already created, so we'll handle stock issues separately
+				fmt.Printf("Warning: Failed to decrement stock for product %d: %v\n", item.ProductID, err)
+			}
 		}
 
 		// Get retailer email for Stripe

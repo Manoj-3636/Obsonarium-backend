@@ -4,6 +4,7 @@ import (
 	"Obsonarium-backend/internal/models"
 	"database/sql"
 	"errors"
+	"fmt"
 )
 
 var ErrProductNotFound = errors.New("product not found")
@@ -13,6 +14,7 @@ type IRetailerProductsRepo interface {
 	SearchProducts(keyword string) ([]models.RetailerProduct, error)
 	GetProduct(id int) (*models.RetailerProduct, error)
 	GetProductsByRetailerID(retailerID int) ([]models.RetailerProduct, error)
+	DecrementStock(productID int, quantity int) error
 }
 
 type RetailerProductsRepo struct {
@@ -174,4 +176,26 @@ func (repo *RetailerProductsRepo) GetProductsByRetailerID(retailerID int) ([]mod
 	}
 
 	return products, nil
+}
+
+// DecrementStock decrements the stock quantity for a product
+func (repo *RetailerProductsRepo) DecrementStock(productID int, quantity int) error {
+	query := `
+		UPDATE retailer_products
+		SET stock_qty = stock_qty - $1,
+		    updated_at = NOW()
+		WHERE id = $2 AND stock_qty >= $1
+		RETURNING id
+	`
+
+	var updatedID int
+	err := repo.DB.QueryRow(query, quantity, productID).Scan(&updatedID)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("insufficient stock for product %d", productID)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to decrement stock: %w", err)
+	}
+
+	return nil
 }

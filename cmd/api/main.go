@@ -27,27 +27,27 @@ type config struct {
 }
 
 type dependencies struct {
-	logger                    zerolog.Logger
-	JSONutils                 jsonutils.JSONutils
-	AuthService               services.AuthService
-	RetailerProductsService   services.RetailerProductsService
-	RetailersService          services.RetailersService
-	WholesalersService        services.WholesalersService
-	WholesalerProductService  services.WholesalerProductService
-	WholesalerProductsService services.WholesalerProductsService
-	ProductService            services.ProductService
-	CartService               services.CartService
-	RetailerCartService       services.RetailerCartService
-	UserAddressesService      services.UserAddressesService
-	ProductReviewsService     services.ProductReviewsService
-	ProductQueriesService     services.ProductQueriesService
-	UploadService                 *services.UploadService
-	CheckoutService               *services.CheckoutService
-	ConsumerOrdersService         *services.ConsumerOrdersService
-	RetailerCheckoutService       *services.RetailerCheckoutService
+	logger                         zerolog.Logger
+	JSONutils                      jsonutils.JSONutils
+	AuthService                    services.AuthService
+	RetailerProductsService        services.RetailerProductsService
+	RetailersService               services.RetailersService
+	WholesalersService             services.WholesalersService
+	WholesalerProductService       services.WholesalerProductService
+	WholesalerProductsService      services.WholesalerProductsService
+	ProductService                 services.ProductService
+	CartService                    services.CartService
+	RetailerCartService            services.RetailerCartService
+	UserAddressesService           services.UserAddressesService
+	ProductReviewsService          services.ProductReviewsService
+	ProductQueriesService          services.ProductQueriesService
+	UploadService                  *services.UploadService
+	CheckoutService                *services.CheckoutService
+	ConsumerOrdersService          *services.ConsumerOrdersService
+	RetailerCheckoutService        *services.RetailerCheckoutService
 	RetailerWholesaleOrdersService *services.RetailerWholesaleOrdersService
-	StripeService                 *services.StripeService
-	UsersRepo                     repositories.IUsersRepo
+	StripeService                  *services.StripeService
+	UsersRepo                      repositories.IUsersRepo
 }
 
 type application struct {
@@ -83,23 +83,23 @@ func main() {
 	app := &application{
 		config: cfg,
 		shared_deps: dependencies{
-			logger:                    logger,
-			JSONutils:                 jsonutils.NewJSONutils(),
-			AuthService:               *services.NewAuthService(repositories.NewUsersRepo(db), repositories.NewRetailersRepo(db), repositories.NewWholesalersRepo(db)),
-			RetailerProductsService:   *services.NewRetailerProductsService(repositories.NewRetailerProductsRepo(db)),
-			RetailersService:          *services.NewRetailersService(repositories.NewRetailersRepo(db)),
-			WholesalersService:        *services.NewWholesalersService(repositories.NewWholesalersRepo(db)),
-			WholesalerProductService:  *services.NewWholesalerProductService(repositories.NewWholesalerProductRepository(db)),
-			WholesalerProductsService: *services.NewWholesalerProductsService(repositories.NewWholesalerProductRepository(db)),
-			ProductService:            *services.NewProductService(repositories.NewProductRepository(db)),
-			CartService:               *services.NewCartService(repositories.NewCartRepo(db), repositories.NewUsersRepo(db)),
-			RetailerCartService:       *services.NewRetailerCartService(repositories.NewRetailerCartRepo(db), repositories.NewRetailersRepo(db)),
-			UserAddressesService:      *services.NewUserAddressesService(repositories.NewUserAddressesRepo(db), repositories.NewUsersRepo(db)),
-			ProductReviewsService:     *services.NewProductReviewsService(repositories.NewProductReviewsRepo(db)),
+			logger:                         logger,
+			JSONutils:                      jsonutils.NewJSONutils(),
+			AuthService:                    *services.NewAuthService(repositories.NewUsersRepo(db), repositories.NewRetailersRepo(db), repositories.NewWholesalersRepo(db)),
+			RetailerProductsService:        *services.NewRetailerProductsService(repositories.NewRetailerProductsRepo(db)),
+			RetailersService:               *services.NewRetailersService(repositories.NewRetailersRepo(db)),
+			WholesalersService:             *services.NewWholesalersService(repositories.NewWholesalersRepo(db)),
+			WholesalerProductService:       *services.NewWholesalerProductService(repositories.NewWholesalerProductRepository(db)),
+			WholesalerProductsService:      *services.NewWholesalerProductsService(repositories.NewWholesalerProductRepository(db)),
+			ProductService:                 *services.NewProductService(repositories.NewProductRepository(db)),
+			CartService:                    *services.NewCartService(repositories.NewCartRepo(db), repositories.NewUsersRepo(db), repositories.NewRetailerProductsRepo(db)),
+			RetailerCartService:            *services.NewRetailerCartService(repositories.NewRetailerCartRepo(db), repositories.NewRetailersRepo(db), repositories.NewWholesalerProductRepository(db)),
+			UserAddressesService:           *services.NewUserAddressesService(repositories.NewUserAddressesRepo(db), repositories.NewUsersRepo(db)),
+			ProductReviewsService:          *services.NewProductReviewsService(repositories.NewProductReviewsRepo(db)),
 			ProductQueriesService:          *services.NewProductQueriesService(repositories.NewProductQueriesRepo(db), repositories.NewUsersRepo(db), services.NewEmailService(os.Getenv("MAILTRAP_API_TOKEN"))),
 			UploadService:                  services.NewUploadService(),
-			StripeService:                   services.NewStripeService(),
-			CheckoutService:                 services.NewCheckoutService(repositories.NewConsumerOrdersRepository(db), repositories.NewRetailerProductsRepo(db), repositories.NewCartRepo(db), services.NewStripeService(), repositories.NewUsersRepo(db)),
+			StripeService:                  services.NewStripeService(),
+			CheckoutService:                services.NewCheckoutService(repositories.NewConsumerOrdersRepository(db), repositories.NewRetailerProductsRepo(db), repositories.NewCartRepo(db), services.NewStripeService(), repositories.NewUsersRepo(db)),
 			ConsumerOrdersService:          services.NewConsumerOrdersService(repositories.NewConsumerOrdersRepository(db)),
 			RetailerWholesaleOrdersService: services.NewRetailerWholesaleOrdersService(repositories.NewRetailerWholesaleOrdersRepository(db)),
 			RetailerCheckoutService:        services.NewRetailerCheckoutService(repositories.NewRetailerWholesaleOrdersRepository(db), repositories.NewWholesalerProductRepository(db), repositories.NewRetailerCartRepo(db), services.NewStripeService(), repositories.NewRetailersRepo(db)),
