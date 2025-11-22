@@ -27,9 +27,14 @@ func (r *ConsumerOrdersRepository) CreateOrder(ctx context.Context, order *model
 	query := `
 		INSERT INTO consumer_orders (
 			consumer_id, payment_method, payment_status, order_status, 
-			total_amount, scheduled_at, address_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			total_amount, scheduled_at, address_id, stripe_session_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at`
+
+	var stripeSessionID interface{}
+	if order.StripeSessionID != nil {
+		stripeSessionID = *order.StripeSessionID
+	}
 
 	err = tx.QueryRowContext(ctx, query,
 		order.ConsumerID,
@@ -39,6 +44,7 @@ func (r *ConsumerOrdersRepository) CreateOrder(ctx context.Context, order *model
 		order.TotalAmount,
 		order.ScheduledAt,
 		order.AddressID,
+		stripeSessionID,
 	).Scan(&order.ID, &order.CreatedAt, &order.UpdatedAt)
 
 	if err != nil {
@@ -76,7 +82,7 @@ func (r *ConsumerOrdersRepository) GetActiveOrdersByRetailerID(retailerID int) (
 		SELECT DISTINCT
 			co.id, co.consumer_id, co.payment_method, co.payment_status, 
 			co.order_status, co.total_amount, co.scheduled_at, co.address_id,
-			co.created_at, co.updated_at
+			co.stripe_session_id, co.created_at, co.updated_at
 		FROM consumer_orders co
 		INNER JOIN consumer_order_items coi ON coi.order_id = co.id
 		INNER JOIN retailer_products rp ON rp.id = coi.product_id
@@ -97,6 +103,7 @@ func (r *ConsumerOrdersRepository) GetActiveOrdersByRetailerID(retailerID int) (
 		var order models.ConsumerOrder
 		var scheduledAt sql.NullTime
 		var addressID sql.NullInt64
+		var stripeSessionID sql.NullString
 
 		err := rows.Scan(
 			&order.ID,
@@ -107,6 +114,7 @@ func (r *ConsumerOrdersRepository) GetActiveOrdersByRetailerID(retailerID int) (
 			&order.TotalAmount,
 			&scheduledAt,
 			&addressID,
+			&stripeSessionID,
 			&order.CreatedAt,
 			&order.UpdatedAt,
 		)
@@ -263,7 +271,7 @@ func (r *ConsumerOrdersRepository) GetHistoryOrdersByRetailerID(retailerID int) 
 		SELECT DISTINCT
 			co.id, co.consumer_id, co.payment_method, co.payment_status,
 			co.order_status, co.total_amount, co.scheduled_at, co.address_id,
-			co.created_at, co.updated_at
+			co.stripe_session_id, co.created_at, co.updated_at
 		FROM consumer_orders co
 		INNER JOIN consumer_order_items coi ON coi.order_id = co.id
 		INNER JOIN retailer_products rp ON rp.id = coi.product_id
@@ -284,6 +292,7 @@ func (r *ConsumerOrdersRepository) GetHistoryOrdersByRetailerID(retailerID int) 
 		var order models.ConsumerOrder
 		var scheduledAt sql.NullTime
 		var addressID sql.NullInt64
+		var stripeSessionID sql.NullString
 
 		err := rows.Scan(
 			&order.ID,
@@ -294,6 +303,7 @@ func (r *ConsumerOrdersRepository) GetHistoryOrdersByRetailerID(retailerID int) 
 			&order.TotalAmount,
 			&scheduledAt,
 			&addressID,
+			&stripeSessionID,
 			&order.CreatedAt,
 			&order.UpdatedAt,
 		)
@@ -307,6 +317,9 @@ func (r *ConsumerOrdersRepository) GetHistoryOrdersByRetailerID(retailerID int) 
 		if addressID.Valid {
 			order.AddressID = new(int)
 			*order.AddressID = int(addressID.Int64)
+		}
+		if stripeSessionID.Valid {
+			order.StripeSessionID = &stripeSessionID.String
 		}
 
 		if _, exists := orderMap[order.ID]; !exists {
@@ -329,4 +342,20 @@ func (r *ConsumerOrdersRepository) GetHistoryOrdersByRetailerID(retailerID int) 
 	}
 
 	return orders, nil
+}
+
+// UpdateStripeSessionID updates the Stripe session ID for an order
+func (r *ConsumerOrdersRepository) UpdateStripeSessionID(orderID int, sessionID string) error {
+	query := `
+		UPDATE consumer_orders
+		SET stripe_session_id = $1, updated_at = NOW()
+		WHERE id = $2
+	`
+
+	_, err := r.DB.Exec(query, sessionID, orderID)
+	if err != nil {
+		return fmt.Errorf("failed to update Stripe session ID: %w", err)
+	}
+
+	return nil
 }

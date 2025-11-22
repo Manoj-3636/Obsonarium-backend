@@ -95,7 +95,7 @@ func main() {
 			ProductReviewsService:     *services.NewProductReviewsService(repositories.NewProductReviewsRepo(db)),
 			ProductQueriesService:     *services.NewProductQueriesService(repositories.NewProductQueriesRepo(db), repositories.NewUsersRepo(db), services.NewEmailService(os.Getenv("MAILTRAP_API_TOKEN"))),
 			UploadService:             services.NewUploadService(),
-			CheckoutService:           services.NewCheckoutService(repositories.NewConsumerOrdersRepository(db), repositories.NewRetailerProductsRepo(db), repositories.NewCartRepo(db)),
+			CheckoutService:           services.NewCheckoutService(repositories.NewConsumerOrdersRepository(db), repositories.NewRetailerProductsRepo(db), repositories.NewCartRepo(db), services.NewStripeService(), repositories.NewUsersRepo(db)),
 			ConsumerOrdersService:     services.NewConsumerOrdersService(repositories.NewConsumerOrdersRepository(db)),
 			UsersRepo:                 repositories.NewUsersRepo(db),
 		},

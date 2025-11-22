@@ -28,15 +28,12 @@ func (h *CheckoutHandler) HandleCheckout(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	order, err := h.Service.ProcessCheckout(r.Context(), userID, req)
+	response, err := h.Service.ProcessCheckout(r.Context(), userID, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "Order placed successfully",
-		"order":   order,
-	})
+	json.NewEncoder(w).Encode(response)
 }

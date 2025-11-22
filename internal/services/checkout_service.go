@@ -11,13 +11,17 @@ type CheckoutService struct {
 	OrdersRepo   *repositories.ConsumerOrdersRepository
 	ProductsRepo *repositories.RetailerProductsRepo
 	CartRepo     repositories.ICartRepo
+	StripeService *StripeService
+	UsersRepo    repositories.IUsersRepo
 }
 
-func NewCheckoutService(ordersRepo *repositories.ConsumerOrdersRepository, productsRepo *repositories.RetailerProductsRepo, cartRepo repositories.ICartRepo) *CheckoutService {
+func NewCheckoutService(ordersRepo *repositories.ConsumerOrdersRepository, productsRepo *repositories.RetailerProductsRepo, cartRepo repositories.ICartRepo, stripeService *StripeService, usersRepo repositories.IUsersRepo) *CheckoutService {
 	return &CheckoutService{
 		OrdersRepo:   ordersRepo,
 		ProductsRepo: productsRepo,
 		CartRepo:     cartRepo,
+		StripeService: stripeService,
+		UsersRepo:    usersRepo,
 	}
 }
 
@@ -32,11 +36,13 @@ type CartItem struct {
 	Quantity  int `json:"quantity"`
 }
 
-func (s *CheckoutService) ProcessCheckout(ctx context.Context, userID int, req CheckoutRequest) (*models.ConsumerOrder, error) {
-	if req.PaymentMethod != "offline" {
-		return nil, fmt.Errorf("only offline payment is currently supported")
-	}
+type CheckoutResponse struct {
+	Order       *models.ConsumerOrder `json:"order,omitempty"`
+	SessionURL  string                `json:"session_url,omitempty"`
+	Message     string                `json:"message"`
+}
 
+func (s *CheckoutService) ProcessCheckout(ctx context.Context, userID int, req CheckoutRequest) (*CheckoutResponse, error) {
 	var totalAmount float64
 	var orderItems []models.ConsumerOrderItem
 
@@ -66,18 +72,89 @@ func (s *CheckoutService) ProcessCheckout(ctx context.Context, userID int, req C
 		AddressID:     &req.AddressID,
 	}
 
-	createdOrder, err := s.OrdersRepo.CreateOrder(ctx, order, orderItems)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create order: %w", err)
+	// Handle offline payment
+	if req.PaymentMethod == "offline" {
+		createdOrder, err := s.OrdersRepo.CreateOrder(ctx, order, orderItems)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create order: %w", err)
+		}
+
+		// Clear the user's cart after successful order creation
+		err = s.CartRepo.ClearCart(userID)
+		if err != nil {
+			// Log the error but don't fail the order creation
+			return &CheckoutResponse{
+				Order:   createdOrder,
+				Message: "Order placed successfully (cart clearing failed)",
+			}, nil
+		}
+
+		return &CheckoutResponse{
+			Order:   createdOrder,
+			Message: "Order placed successfully",
+		}, nil
 	}
 
-	// Clear the user's cart after successful order creation
-	err = s.CartRepo.ClearCart(userID)
-	if err != nil {
-		// Log the error but don't fail the order creation
-		// The order was already created successfully
-		return createdOrder, fmt.Errorf("order created but failed to clear cart: %w", err)
+	// Handle online payment (Stripe)
+	if req.PaymentMethod == "online" {
+		// Create order first
+		createdOrder, err := s.OrdersRepo.CreateOrder(ctx, order, orderItems)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create order: %w", err)
+		}
+
+		// Get user email for Stripe
+		user, err := s.UsersRepo.GetUserByID(userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user: %w", err)
+		}
+
+		// Get product names for Stripe
+		productNames := make(map[int]string)
+		for _, item := range orderItems {
+			product, err := s.ProductsRepo.GetProduct(item.ProductID)
+			if err == nil {
+				productNames[item.ProductID] = product.Name
+			}
+		}
+
+		// Create Stripe checkout session
+		successURL := fmt.Sprintf("http://localhost:5173/checkout/success?order_id=%d", createdOrder.ID)
+		cancelURL := "http://localhost:5173/checkout/cancel"
+
+		sessionID, sessionURL, err := s.StripeService.CreateCheckoutSession(CreateCheckoutSessionParams{
+			OrderID:       createdOrder.ID,
+			UserID:        userID,
+			Items:         orderItems,
+			ProductNames:  productNames,
+			TotalAmount:   totalAmount,
+			SuccessURL:    successURL,
+			CancelURL:     cancelURL,
+			CustomerEmail: user.Email,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Stripe checkout session: %w", err)
+		}
+
+		// Update order with Stripe session ID in database
+		err = s.OrdersRepo.UpdateStripeSessionID(createdOrder.ID, sessionID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update Stripe session ID: %w", err)
+		}
+		createdOrder.StripeSessionID = &sessionID
+
+		// Clear the user's cart after creating the Stripe session
+		err = s.CartRepo.ClearCart(userID)
+		if err != nil {
+			// Log the error but don't fail
+		}
+
+		return &CheckoutResponse{
+			Order:      createdOrder,
+			SessionURL: sessionURL,
+			Message:    "Redirecting to payment...",
+		}, nil
 	}
 
-	return createdOrder, nil
+	return nil, fmt.Errorf("invalid payment method: %s", req.PaymentMethod)
 }
