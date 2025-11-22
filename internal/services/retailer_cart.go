@@ -83,3 +83,11 @@ func (s *RetailerCartService) GetCartNumberByEmail(email string) (int, error) {
 
 	return count, nil
 }
+
+func (s *RetailerCartService) ClearCartByRetailerID(retailerID int) error {
+	err := s.cartRepo.ClearCart(retailerID)
+	if err != nil {
+		return fmt.Errorf("service error clearing cart: %w", err)
+	}
+	return nil
+}

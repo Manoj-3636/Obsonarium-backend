@@ -14,6 +14,7 @@ type IRetailerCartRepo interface {
 	RemoveCartItem(retailerID int, productID int) error
 	DecreaseCartItem(retailerID int, productID int) (int, error)
 	GetCartNumber(retailerID int) (int, error)
+	ClearCart(retailerID int) error
 }
 
 type RetailerCartRepo struct {
@@ -155,4 +156,18 @@ func (repo *RetailerCartRepo) GetCartNumber(retailerID int) (int, error) {
 	}
 
 	return count, nil
+}
+
+func (repo *RetailerCartRepo) ClearCart(retailerID int) error {
+	query := `
+		DELETE FROM retailer_cart_items
+		WHERE retailer_id = $1
+	`
+
+	_, err := repo.DB.Exec(query, retailerID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

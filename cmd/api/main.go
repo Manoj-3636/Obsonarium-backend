@@ -41,10 +41,13 @@ type dependencies struct {
 	UserAddressesService      services.UserAddressesService
 	ProductReviewsService     services.ProductReviewsService
 	ProductQueriesService     services.ProductQueriesService
-	UploadService             *services.UploadService
-	CheckoutService           *services.CheckoutService
-	ConsumerOrdersService     *services.ConsumerOrdersService
-	UsersRepo                 repositories.IUsersRepo
+	UploadService                 *services.UploadService
+	CheckoutService               *services.CheckoutService
+	ConsumerOrdersService         *services.ConsumerOrdersService
+	RetailerCheckoutService       *services.RetailerCheckoutService
+	RetailerWholesaleOrdersService *services.RetailerWholesaleOrdersService
+	StripeService                 *services.StripeService
+	UsersRepo                     repositories.IUsersRepo
 }
 
 type application struct {
@@ -93,11 +96,14 @@ func main() {
 			RetailerCartService:       *services.NewRetailerCartService(repositories.NewRetailerCartRepo(db), repositories.NewRetailersRepo(db)),
 			UserAddressesService:      *services.NewUserAddressesService(repositories.NewUserAddressesRepo(db), repositories.NewUsersRepo(db)),
 			ProductReviewsService:     *services.NewProductReviewsService(repositories.NewProductReviewsRepo(db)),
-			ProductQueriesService:     *services.NewProductQueriesService(repositories.NewProductQueriesRepo(db), repositories.NewUsersRepo(db), services.NewEmailService(os.Getenv("MAILTRAP_API_TOKEN"))),
-			UploadService:             services.NewUploadService(),
-			CheckoutService:           services.NewCheckoutService(repositories.NewConsumerOrdersRepository(db), repositories.NewRetailerProductsRepo(db), repositories.NewCartRepo(db), services.NewStripeService(), repositories.NewUsersRepo(db)),
-			ConsumerOrdersService:     services.NewConsumerOrdersService(repositories.NewConsumerOrdersRepository(db)),
-			UsersRepo:                 repositories.NewUsersRepo(db),
+			ProductQueriesService:          *services.NewProductQueriesService(repositories.NewProductQueriesRepo(db), repositories.NewUsersRepo(db), services.NewEmailService(os.Getenv("MAILTRAP_API_TOKEN"))),
+			UploadService:                  services.NewUploadService(),
+			StripeService:                   services.NewStripeService(),
+			CheckoutService:                 services.NewCheckoutService(repositories.NewConsumerOrdersRepository(db), repositories.NewRetailerProductsRepo(db), repositories.NewCartRepo(db), services.NewStripeService(), repositories.NewUsersRepo(db)),
+			ConsumerOrdersService:          services.NewConsumerOrdersService(repositories.NewConsumerOrdersRepository(db)),
+			RetailerWholesaleOrdersService: services.NewRetailerWholesaleOrdersService(repositories.NewRetailerWholesaleOrdersRepository(db)),
+			RetailerCheckoutService:        services.NewRetailerCheckoutService(repositories.NewRetailerWholesaleOrdersRepository(db), repositories.NewWholesalerProductRepository(db), repositories.NewRetailerCartRepo(db), services.NewStripeService(), repositories.NewRetailersRepo(db)),
+			UsersRepo:                      repositories.NewUsersRepo(db),
 		},
 	}
 

@@ -10,10 +10,13 @@ import (
 	"Obsonarium-backend/internal/handlers/product_queries"
 	"Obsonarium-backend/internal/handlers/product_reviews"
 	"Obsonarium-backend/internal/handlers/retailer_cart"
+	retailer_checkout "Obsonarium-backend/internal/handlers/retailer_checkout"
 	"Obsonarium-backend/internal/handlers/retailer_products"
+	retailer_wholesale_orders "Obsonarium-backend/internal/handlers/retailer_wholesale_orders"
 	"Obsonarium-backend/internal/handlers/retailers"
 	"Obsonarium-backend/internal/handlers/upload_handler"
 	"Obsonarium-backend/internal/handlers/user_addresses"
+	wholesaler_orders "Obsonarium-backend/internal/handlers/wholesaler_orders"
 	"Obsonarium-backend/internal/handlers/wholesaler_product_handler"
 	"Obsonarium-backend/internal/handlers/wholesaler_products"
 	"Obsonarium-backend/internal/handlers/wholesalers"
@@ -125,6 +128,18 @@ func (app *application) newRouter() *chi.Mux {
 		r.Delete("/{product_id}", retailer_cart.RemoveCartItem(&app.shared_deps.RetailerCartService, app.shared_deps.JSONutils.Writer))
 	})
 
+	// Retailer checkout routes
+	r.Route("/api/retailer/checkout", func(r chi.Router) {
+		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Post("/", retailer_checkout.NewRetailerCheckoutHandler(app.shared_deps.RetailerCheckoutService, &app.shared_deps.RetailersService).HandleCheckout)
+	})
+
+	// Retailer wholesale orders routes (for retailers to view their orders)
+	r.Route("/api/retailer/wholesale-orders", func(r chi.Router) {
+		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Get("/", retailer_wholesale_orders.GetOrders(app.shared_deps.RetailerWholesaleOrdersService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
+	})
+
 	// User addresses routes with consumer authentication middleware
 	r.Route("/api/addresses", func(r chi.Router) {
 		r.Use(auth.RequireConsumer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
@@ -169,6 +184,14 @@ func (app *application) newRouter() *chi.Mux {
 		r.Get("/{id}", wholesaler_product_handler.GetWholesalerProduct(&app.shared_deps.WholesalerProductService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer))
 		r.Put("/{id}", wholesaler_product_handler.UpdateProduct(&app.shared_deps.WholesalerProductService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 		r.Delete("/{id}", wholesaler_product_handler.DeleteProduct(&app.shared_deps.WholesalerProductService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer))
+	})
+
+	// Wholesaler orders routes (for wholesalers to manage retailer orders)
+	r.Route("/api/wholesaler/orders", func(r chi.Router) {
+		r.Use(auth.RequireWholesaler(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Get("/", wholesaler_orders.GetActiveOrders(app.shared_deps.RetailerWholesaleOrdersService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer))
+		r.Get("/history", wholesaler_orders.GetHistoryOrders(app.shared_deps.RetailerWholesaleOrdersService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer))
+		r.Patch("/items/{item_id}/status", wholesaler_orders.UpdateOrderItemStatus(app.shared_deps.RetailerWholesaleOrdersService, &app.shared_deps.WholesalersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 	})
 
 	return r
