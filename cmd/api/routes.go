@@ -120,6 +120,12 @@ func (app *application) newRouter() *chi.Mux {
 		r.Post("/", checkout.NewCheckoutHandler(app.shared_deps.CheckoutService).HandleCheckout)
 	})
 
+	// Consumer orders routes
+	r.Route("/api/consumer/orders", func(r chi.Router) {
+		r.Use(auth.RequireConsumer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Get("/", consumer_orders.GetConsumerOrders(app.shared_deps.ConsumerOrdersService, app.shared_deps.JSONutils.Writer))
+	})
+
 	// Retailer cart routes with retailer authentication middleware
 	r.Route("/api/retailer/cart", func(r chi.Router) {
 		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))

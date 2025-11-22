@@ -136,3 +136,26 @@ func UpdateOrderItemStatus(
 		writeJSON(w, jsonutils.Envelope{"message": "Order item status updated successfully"}, http.StatusOK, nil)
 	}
 }
+
+// GetConsumerOrders gets all orders for the authenticated consumer (both ongoing and past)
+func GetConsumerOrders(
+	ordersService *services.ConsumerOrdersService,
+	writeJSON jsonutils.JSONwriter,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get user ID from context (set by RequireConsumer middleware)
+		userID, ok := r.Context().Value(auth.UserIDKey).(int)
+		if !ok || userID == 0 {
+			writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+			return
+		}
+
+		orders, err := ordersService.GetOrdersByConsumerID(userID)
+		if err != nil {
+			writeJSON(w, jsonutils.Envelope{"error": "Failed to fetch orders"}, http.StatusInternalServerError, nil)
+			return
+		}
+
+		writeJSON(w, jsonutils.Envelope{"orders": orders}, http.StatusOK, nil)
+	}
+}

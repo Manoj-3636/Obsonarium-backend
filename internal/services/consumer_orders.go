@@ -61,3 +61,12 @@ func (s *ConsumerOrdersService) UpdateOrderItemStatus(itemID int, retailerID int
 
 	return nil
 }
+
+// GetOrdersByConsumerID gets all orders for a consumer (both ongoing and past)
+func (s *ConsumerOrdersService) GetOrdersByConsumerID(consumerID int) ([]models.ConsumerOrder, error) {
+	orders, err := s.OrdersRepo.GetOrdersByConsumerID(consumerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get orders: %w", err)
+	}
+	return orders, nil
+}

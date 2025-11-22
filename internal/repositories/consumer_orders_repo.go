@@ -359,3 +359,119 @@ func (r *ConsumerOrdersRepository) UpdateStripeSessionID(orderID int, sessionID 
 
 	return nil
 }
+
+// GetOrdersByConsumerID gets all orders for a consumer (both ongoing and past)
+func (r *ConsumerOrdersRepository) GetOrdersByConsumerID(consumerID int) ([]models.ConsumerOrder, error) {
+	query := `
+		SELECT 
+			co.id, co.consumer_id, co.payment_method, co.payment_status, 
+			co.order_status, co.total_amount, co.scheduled_at, co.address_id,
+			co.stripe_session_id, co.created_at, co.updated_at
+		FROM consumer_orders co
+		WHERE co.consumer_id = $1
+		ORDER BY 
+			CASE 
+				WHEN co.order_status != 'cancelled' AND EXISTS (
+					SELECT 1 FROM consumer_order_items coi 
+					WHERE coi.order_id = co.id 
+					AND coi.status NOT IN ('delivered', 'rejected')
+				) THEN 0
+				ELSE 1
+			END,
+			co.created_at DESC
+	`
+
+	rows, err := r.DB.Query(query, consumerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query orders: %w", err)
+	}
+	defer rows.Close()
+
+	var orders []models.ConsumerOrder
+	orderMap := make(map[int]*models.ConsumerOrder)
+
+	for rows.Next() {
+		var order models.ConsumerOrder
+		var scheduledAt sql.NullTime
+		var addressID sql.NullInt64
+		var stripeSessionID sql.NullString
+
+		err := rows.Scan(
+			&order.ID,
+			&order.ConsumerID,
+			&order.PaymentMethod,
+			&order.PaymentStatus,
+			&order.OrderStatus,
+			&order.TotalAmount,
+			&scheduledAt,
+			&addressID,
+			&stripeSessionID,
+			&order.CreatedAt,
+			&order.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan order: %w", err)
+		}
+
+		if scheduledAt.Valid {
+			order.ScheduledAt = &scheduledAt.Time
+		}
+		if addressID.Valid {
+			order.AddressID = new(int)
+			*order.AddressID = int(addressID.Int64)
+		}
+		if stripeSessionID.Valid {
+			order.StripeSessionID = &stripeSessionID.String
+		}
+
+		if _, exists := orderMap[order.ID]; !exists {
+			orderMap[order.ID] = &order
+			orders = append(orders, order)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating orders: %w", err)
+	}
+
+	// Get all order items for each order
+	for i := range orders {
+		itemsQuery := `
+			SELECT coi.id, coi.order_id, coi.product_id, coi.qty, coi.unit_price, coi.status
+			FROM consumer_order_items coi
+			WHERE coi.order_id = $1
+			ORDER BY coi.id
+		`
+		itemRows, err := r.DB.Query(itemsQuery, orders[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query order items: %w", err)
+		}
+
+		var items []models.ConsumerOrderItem
+		for itemRows.Next() {
+			var item models.ConsumerOrderItem
+			err := itemRows.Scan(
+				&item.ID,
+				&item.OrderID,
+				&item.ProductID,
+				&item.Qty,
+				&item.UnitPrice,
+				&item.Status,
+			)
+			if err != nil {
+				itemRows.Close()
+				return nil, fmt.Errorf("failed to scan order item: %w", err)
+			}
+			items = append(items, item)
+		}
+		itemRows.Close()
+
+		if err := itemRows.Err(); err != nil {
+			return nil, fmt.Errorf("error iterating order items: %w", err)
+		}
+
+		orders[i].Items = items
+	}
+
+	return orders, nil
+}
