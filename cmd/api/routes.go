@@ -4,6 +4,7 @@ import (
 	"Obsonarium-backend/internal/handlers/auth"
 	"Obsonarium-backend/internal/handlers/cart"
 	"Obsonarium-backend/internal/handlers/checkout"
+	consumer_orders "Obsonarium-backend/internal/handlers/consumer_orders"
 	"Obsonarium-backend/internal/handlers/healthcheck"
 	"Obsonarium-backend/internal/handlers/product_handler"
 	"Obsonarium-backend/internal/handlers/product_queries"
@@ -68,6 +69,14 @@ func (app *application) newRouter() *chi.Mux {
 		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
 		r.Get("/", product_queries.GetQueries(&app.shared_deps.ProductQueriesService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
 		r.Post("/{query_id}/resolve", product_queries.ResolveQuery(&app.shared_deps.ProductQueriesService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+	})
+
+	// Retailer consumer orders routes
+	r.Route("/api/retailer/orders", func(r chi.Router) {
+		r.Use(auth.RequireRetailer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Get("/", consumer_orders.GetActiveOrders(app.shared_deps.ConsumerOrdersService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
+		r.Get("/history", consumer_orders.GetHistoryOrders(app.shared_deps.ConsumerOrdersService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer))
+		r.Patch("/items/{item_id}/status", consumer_orders.UpdateOrderItemStatus(app.shared_deps.ConsumerOrdersService, &app.shared_deps.RetailersService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 	})
 
 	// Upload routes with retailer authentication middleware

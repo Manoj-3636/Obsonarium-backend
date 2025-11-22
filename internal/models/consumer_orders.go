@@ -24,4 +24,5 @@ type ConsumerOrderItem struct {
 	ProductID int     `json:"product_id" db:"product_id"`
 	Qty       int     `json:"qty" db:"qty"`
 	UnitPrice float64 `json:"unit_price" db:"unit_price"`
+	Status    string  `json:"status" db:"status"`
 }
