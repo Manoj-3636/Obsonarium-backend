@@ -3,6 +3,7 @@ package main
 import (
 	"Obsonarium-backend/internal/handlers/auth"
 	"Obsonarium-backend/internal/handlers/cart"
+	"Obsonarium-backend/internal/handlers/checkout"
 	"Obsonarium-backend/internal/handlers/healthcheck"
 	"Obsonarium-backend/internal/handlers/product_handler"
 	"Obsonarium-backend/internal/handlers/product_queries"
@@ -98,6 +99,12 @@ func (app *application) newRouter() *chi.Mux {
 		r.Get("/number", cart.GetCartNumber(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
 		r.Post("/", cart.AddCartItem(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 		r.Delete("/{product_id}", cart.RemoveCartItem(&app.shared_deps.CartService, app.shared_deps.JSONutils.Writer))
+	})
+
+	// Checkout routes
+	r.Route("/api/checkout", func(r chi.Router) {
+		r.Use(auth.RequireConsumer(&app.shared_deps.AuthService, app.shared_deps.logger, app.shared_deps.JSONutils.Writer))
+		r.Post("/", checkout.NewCheckoutHandler(app.shared_deps.CheckoutService).HandleCheckout)
 	})
 
 	// Retailer cart routes with retailer authentication middleware

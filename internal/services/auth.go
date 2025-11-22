@@ -93,6 +93,10 @@ func (authService *AuthService) ClaimsToUser(claims *jwt.MapClaims) (*models.Use
 	return user, fmt.Errorf("%w:%w", ErrClaimsParse, err)
 }
 
+func (authService *AuthService) GetUserByEmail(email string) (*models.User, error) {
+	return authService.usersRepo.GetUserByEmail(email)
+}
+
 func (authService *AuthService) UpsertUser(email, name, pfp_url string) error {
 	// For now, it just calls the repository.
 	// In the future, you could add logic here like:

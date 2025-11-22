@@ -42,6 +42,7 @@ type dependencies struct {
 	ProductReviewsService     services.ProductReviewsService
 	ProductQueriesService     services.ProductQueriesService
 	UploadService             *services.UploadService
+	CheckoutService           *services.CheckoutService
 	UsersRepo                 repositories.IUsersRepo
 }
 
@@ -93,6 +94,7 @@ func main() {
 			ProductReviewsService:     *services.NewProductReviewsService(repositories.NewProductReviewsRepo(db)),
 			ProductQueriesService:     *services.NewProductQueriesService(repositories.NewProductQueriesRepo(db), repositories.NewUsersRepo(db), services.NewEmailService(os.Getenv("MAILTRAP_API_TOKEN"))),
 			UploadService:             services.NewUploadService(),
+			CheckoutService:           services.NewCheckoutService(repositories.NewConsumerOrdersRepository(db), repositories.NewRetailerProductsRepo(db)),
 			UsersRepo:                 repositories.NewUsersRepo(db),
 		},
 	}

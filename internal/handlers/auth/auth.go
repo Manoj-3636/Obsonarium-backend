@@ -27,6 +27,7 @@ const (
 type ContextKey string
 
 const UserEmailKey ContextKey = "user_email"
+const UserIDKey ContextKey = "user_id"
 
 func NewAuth(logger zerolog.Logger, env string) {
 	err := godotenv.Load()
@@ -326,8 +327,17 @@ func RequireConsumer(authService *services.AuthService, logger zerolog.Logger, w
 				return
 			}
 
-			// Add email to request context and continue
+			// Fetch user to get user ID
+			user, err := authService.GetUserByEmail(email)
+			if err != nil {
+				logger.Debug().Err(err).Msg("Failed to fetch user")
+				writeJSON(w, jsonutils.Envelope{"error": "Unauthorized"}, http.StatusUnauthorized, nil)
+				return
+			}
+
+			// Add email and user ID to request context and continue
 			ctx := context.WithValue(r.Context(), UserEmailKey, email)
+			ctx = context.WithValue(ctx, UserIDKey, user.Id)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
