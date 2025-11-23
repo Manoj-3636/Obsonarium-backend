@@ -48,6 +48,7 @@ type dependencies struct {
 	RetailerWholesaleOrdersService *services.RetailerWholesaleOrdersService
 	StripeService                  *services.StripeService
 	ConsumerOTPService            *services.ConsumerOTPService
+	ShopsService                   *services.ShopsService
 	UsersRepo                      repositories.IUsersRepo
 }
 
@@ -105,6 +106,7 @@ func main() {
 			RetailerWholesaleOrdersService: services.NewRetailerWholesaleOrdersService(repositories.NewRetailerWholesaleOrdersRepository(db), repositories.NewRetailersRepo(db), services.NewEmailService(os.Getenv("MAILTRAP_API_TOKEN"))),
 			RetailerCheckoutService:        services.NewRetailerCheckoutService(repositories.NewRetailerWholesaleOrdersRepository(db), repositories.NewWholesalerProductRepository(db), repositories.NewRetailerCartRepo(db), services.NewStripeService(), repositories.NewRetailersRepo(db)),
 			ConsumerOTPService:            services.NewConsumerOTPService(repositories.NewConsumerOTPRepo(db), services.NewEmailService(os.Getenv("MAILTRAP_API_TOKEN")), repositories.NewUsersRepo(db)),
+			ShopsService:                  services.NewShopsService(repositories.NewRetailersRepo(db)),
 			UsersRepo:                      repositories.NewUsersRepo(db),
 		},
 	}

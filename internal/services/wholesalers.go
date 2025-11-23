@@ -40,7 +40,7 @@ func (s *WholesalersService) GetWholesalerByEmail(email string) (*models.Wholesa
 	return wholesaler, nil
 }
 
-func (s *WholesalersService) UpdateWholesaler(email string, businessName, phone, address string) (*models.Wholesaler, error) {
+func (s *WholesalersService) UpdateWholesaler(email string, businessName, phone, address string, latitude, longitude *float64) (*models.Wholesaler, error) {
 	// First, get the current wholesaler to preserve the name (which comes from Google OAuth)
 	currentWholesaler, err := s.GetWholesalerByEmail(email)
 	if err != nil {
@@ -53,6 +53,8 @@ func (s *WholesalersService) UpdateWholesaler(email string, businessName, phone,
 		BusinessName: businessName,
 		Phone:        phone,
 		Address:      address,
+		Latitude:     latitude,
+		Longitude:    longitude,
 	}
 
 	err = s.wholesalersRepo.UpdateWholesaler(wholesaler)

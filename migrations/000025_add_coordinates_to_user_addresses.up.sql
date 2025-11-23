@@ -1,0 +1,4 @@
+ALTER TABLE user_addresses ADD COLUMN latitude DOUBLE PRECISION;
+ALTER TABLE user_addresses ADD COLUMN longitude DOUBLE PRECISION;
+
+

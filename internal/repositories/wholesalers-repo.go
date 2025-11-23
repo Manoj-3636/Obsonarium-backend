@@ -25,12 +25,14 @@ func NewWholesalersRepo(db *sql.DB) *WholesalersRepo {
 
 func (repo *WholesalersRepo) GetWholesalerByID(id int) (*models.Wholesaler, error) {
 	query := `
-		SELECT id, name, business_name, email, phone, address
+		SELECT id, name, business_name, email, phone, address, latitude, longitude
 		FROM wholesalers
 		WHERE id = $1`
 
 	var wholesaler models.Wholesaler
 	var businessName sql.NullString
+	var latitude sql.NullFloat64
+	var longitude sql.NullFloat64
 
 	row := repo.DB.QueryRow(query, id)
 
@@ -41,10 +43,18 @@ func (repo *WholesalersRepo) GetWholesalerByID(id int) (*models.Wholesaler, erro
 		&wholesaler.Email,
 		&wholesaler.Phone,
 		&wholesaler.Address,
+		&latitude,
+		&longitude,
 	)
 
 	if businessName.Valid {
 		wholesaler.BusinessName = businessName.String
+	}
+	if latitude.Valid {
+		wholesaler.Latitude = &latitude.Float64
+	}
+	if longitude.Valid {
+		wholesaler.Longitude = &longitude.Float64
 	}
 
 	if err != nil {
@@ -102,7 +112,7 @@ func (repo *WholesalersRepo) UpsertWholesaler(wholesaler *models.Wholesaler) err
 
 func (repo *WholesalersRepo) GetWholesalerByEmail(email string) (*models.Wholesaler, error) {
 	query := `
-		SELECT id, name, business_name, email, phone, address
+		SELECT id, name, business_name, email, phone, address, latitude, longitude
 		FROM wholesalers
 		WHERE email = $1`
 
@@ -110,6 +120,8 @@ func (repo *WholesalersRepo) GetWholesalerByEmail(email string) (*models.Wholesa
 	var phone sql.NullString
 	var address sql.NullString
 	var businessName sql.NullString
+	var latitude sql.NullFloat64
+	var longitude sql.NullFloat64
 
 	row := repo.DB.QueryRow(query, email)
 
@@ -120,6 +132,8 @@ func (repo *WholesalersRepo) GetWholesalerByEmail(email string) (*models.Wholesa
 		&wholesaler.Email,
 		&phone,
 		&address,
+		&latitude,
+		&longitude,
 	)
 
 	if businessName.Valid {
@@ -130,6 +144,12 @@ func (repo *WholesalersRepo) GetWholesalerByEmail(email string) (*models.Wholesa
 	}
 	if address.Valid {
 		wholesaler.Address = address.String
+	}
+	if latitude.Valid {
+		wholesaler.Latitude = &latitude.Float64
+	}
+	if longitude.Valid {
+		wholesaler.Longitude = &longitude.Float64
 	}
 
 	if err != nil {
@@ -145,8 +165,8 @@ func (repo *WholesalersRepo) GetWholesalerByEmail(email string) (*models.Wholesa
 func (repo *WholesalersRepo) UpdateWholesaler(wholesaler *models.Wholesaler) error {
 	query := `
 		UPDATE wholesalers
-		SET business_name = $1, phone = $2, address = $3
-		WHERE email = $4
+		SET business_name = $1, phone = $2, address = $3, latitude = $4, longitude = $5
+		WHERE email = $6
 		RETURNING id`
 
 	// Note: name is not updated here - it only comes from Google OAuth during login
@@ -156,6 +176,8 @@ func (repo *WholesalersRepo) UpdateWholesaler(wholesaler *models.Wholesaler) err
 		wholesaler.BusinessName,
 		wholesaler.Phone,
 		wholesaler.Address,
+		wholesaler.Latitude,
+		wholesaler.Longitude,
 		wholesaler.Email,
 	).Scan(&wholesaler.Id)
 

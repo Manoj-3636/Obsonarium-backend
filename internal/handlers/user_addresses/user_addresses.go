@@ -40,12 +40,14 @@ func AddAddress(addressesService *services.UserAddressesService, writeJSON jsonu
 		}
 
 		var requestBody struct {
-			Label          string `json:"label"`
-			Street_address string `json:"street_address"`
-			City           string `json:"city"`
-			State          string `json:"state"`
-			Postal_code    string `json:"postal_code"`
-			Country        string `json:"country"`
+			Label          string   `json:"label"`
+			Street_address string   `json:"street_address"`
+			City           string   `json:"city"`
+			State          string   `json:"state"`
+			Postal_code    string   `json:"postal_code"`
+			Country        string   `json:"country"`
+			Latitude       *float64 `json:"latitude,omitempty"`
+			Longitude      *float64 `json:"longitude,omitempty"`
 		}
 
 		err := readJSON(w, r, &requestBody)
@@ -81,6 +83,8 @@ func AddAddress(addressesService *services.UserAddressesService, writeJSON jsonu
 			State:          requestBody.State,
 			Postal_code:    requestBody.Postal_code,
 			Country:        requestBody.Country,
+			Latitude:       requestBody.Latitude,
+			Longitude:      requestBody.Longitude,
 		}
 
 		err = addressesService.AddAddress(email, address)

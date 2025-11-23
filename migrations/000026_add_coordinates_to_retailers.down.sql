@@ -1,0 +1,4 @@
+ALTER TABLE retailers DROP COLUMN IF EXISTS latitude;
+ALTER TABLE retailers DROP COLUMN IF EXISTS longitude;
+
+

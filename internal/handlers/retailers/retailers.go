@@ -71,9 +71,11 @@ func GetCurrentRetailer(retailersService *services.RetailersService, writeJSON j
 }
 
 type UpdateRetailerRequest struct {
-	BusinessName string `json:"business_name"`
-	Phone        string `json:"phone"`
-	Address      string `json:"address"`
+	BusinessName string   `json:"business_name"`
+	Phone        string   `json:"phone"`
+	Address      string   `json:"address"`
+	Latitude     *float64 `json:"latitude,omitempty"`
+	Longitude    *float64 `json:"longitude,omitempty"`
 }
 
 // UpdateCurrentRetailer updates the current authenticated retailer's profile (onboarding)
@@ -143,7 +145,7 @@ func UpdateCurrentRetailer(retailersService *services.RetailersService, writeJSO
 		}
 
 		// Name comes from Google OAuth, not from user input
-		retailer, err := retailersService.UpdateRetailer(email, req.BusinessName, req.Phone, req.Address)
+		retailer, err := retailersService.UpdateRetailer(email, req.BusinessName, req.Phone, req.Address, req.Latitude, req.Longitude)
 		if err != nil {
 			if errors.Is(err, repositories.ErrRetailerNotFound) {
 				writeJSON(w, jsonutils.Envelope{"error": "Retailer not found"}, http.StatusNotFound, nil)

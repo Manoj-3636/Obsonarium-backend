@@ -24,7 +24,7 @@ func NewUserAddressesRepo(db *sql.DB) *UserAddressesRepo {
 
 func (repo *UserAddressesRepo) GetAddressesByUserID(userID int) ([]models.UserAddress, error) {
 	query := `
-		SELECT id, user_id, label, street_address, city, state, postal_code, country
+		SELECT id, user_id, label, street_address, city, state, postal_code, country, latitude, longitude
 		FROM user_addresses
 		WHERE user_id = $1
 		ORDER BY created_at DESC`
@@ -39,6 +39,8 @@ func (repo *UserAddressesRepo) GetAddressesByUserID(userID int) ([]models.UserAd
 
 	for rows.Next() {
 		var address models.UserAddress
+		var latitude sql.NullFloat64
+		var longitude sql.NullFloat64
 		err := rows.Scan(
 			&address.Id,
 			&address.User_id,
@@ -48,9 +50,17 @@ func (repo *UserAddressesRepo) GetAddressesByUserID(userID int) ([]models.UserAd
 			&address.State,
 			&address.Postal_code,
 			&address.Country,
+			&latitude,
+			&longitude,
 		)
 		if err != nil {
 			return nil, err
+		}
+		if latitude.Valid {
+			address.Latitude = &latitude.Float64
+		}
+		if longitude.Valid {
+			address.Longitude = &longitude.Float64
 		}
 		addresses = append(addresses, address)
 	}
@@ -64,8 +74,8 @@ func (repo *UserAddressesRepo) GetAddressesByUserID(userID int) ([]models.UserAd
 
 func (repo *UserAddressesRepo) AddAddress(address *models.UserAddress) error {
 	query := `
-		INSERT INTO user_addresses (user_id, label, street_address, city, state, postal_code, country)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO user_addresses (user_id, label, street_address, city, state, postal_code, country, latitude, longitude)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id`
 
 	err := repo.DB.QueryRow(
@@ -77,6 +87,8 @@ func (repo *UserAddressesRepo) AddAddress(address *models.UserAddress) error {
 		address.State,
 		address.Postal_code,
 		address.Country,
+		address.Latitude,
+		address.Longitude,
 	).Scan(&address.Id)
 
 	return err

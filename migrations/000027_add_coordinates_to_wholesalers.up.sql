@@ -1,0 +1,4 @@
+ALTER TABLE wholesalers ADD COLUMN latitude DOUBLE PRECISION;
+ALTER TABLE wholesalers ADD COLUMN longitude DOUBLE PRECISION;
+
+

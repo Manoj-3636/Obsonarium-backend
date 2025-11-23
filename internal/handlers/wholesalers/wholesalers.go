@@ -71,9 +71,11 @@ func GetCurrentWholesaler(wholesalersService *services.WholesalersService, write
 }
 
 type UpdateWholesalerRequest struct {
-	BusinessName string `json:"business_name"`
-	Phone        string `json:"phone"`
-	Address      string `json:"address"`
+	BusinessName string   `json:"business_name"`
+	Phone        string   `json:"phone"`
+	Address      string   `json:"address"`
+	Latitude     *float64 `json:"latitude,omitempty"`
+	Longitude    *float64 `json:"longitude,omitempty"`
 }
 
 // UpdateCurrentWholesaler updates the current authenticated wholesaler's profile (onboarding)
@@ -143,7 +145,7 @@ func UpdateCurrentWholesaler(wholesalersService *services.WholesalersService, wr
 		}
 
 		// Name comes from Google OAuth, not from user input
-		wholesaler, err := wholesalersService.UpdateWholesaler(email, req.BusinessName, req.Phone, req.Address)
+		wholesaler, err := wholesalersService.UpdateWholesaler(email, req.BusinessName, req.Phone, req.Address, req.Latitude, req.Longitude)
 		if err != nil {
 			if errors.Is(err, repositories.ErrWholesalerNotFound) {
 				writeJSON(w, jsonutils.Envelope{"error": "Wholesaler not found"}, http.StatusNotFound, nil)

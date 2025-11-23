@@ -7,12 +7,14 @@ import (
 )
 
 type RetailersService struct {
-	retailersRepo repositories.IRetailersRepo
+	retailersRepo  repositories.IRetailersRepo
+	locationService *LocationService
 }
 
 func NewRetailersService(retailersRepo repositories.IRetailersRepo) *RetailersService {
 	return &RetailersService{
-		retailersRepo: retailersRepo,
+		retailersRepo:   retailersRepo,
+		locationService: NewLocationService(),
 	}
 }
 
@@ -40,7 +42,7 @@ func (s *RetailersService) GetRetailerByEmail(email string) (*models.Retailer, e
 	return retailer, nil
 }
 
-func (s *RetailersService) UpdateRetailer(email string, businessName, phone, address string) (*models.Retailer, error) {
+func (s *RetailersService) UpdateRetailer(email string, businessName, phone, address string, latitude, longitude *float64) (*models.Retailer, error) {
 	// First, get the current retailer to preserve the name (which comes from Google OAuth)
 	currentRetailer, err := s.GetRetailerByEmail(email)
 	if err != nil {
@@ -53,6 +55,8 @@ func (s *RetailersService) UpdateRetailer(email string, businessName, phone, add
 		BusinessName: businessName,
 		Phone:        phone,
 		Address:      address,
+		Latitude:     latitude,
+		Longitude:    longitude,
 	}
 
 	err = s.retailersRepo.UpdateRetailer(retailer)

@@ -15,6 +15,7 @@ import (
 	"Obsonarium-backend/internal/handlers/retailer_products"
 	retailer_wholesale_orders "Obsonarium-backend/internal/handlers/retailer_wholesale_orders"
 	"Obsonarium-backend/internal/handlers/retailers"
+	"Obsonarium-backend/internal/handlers/shops"
 	"Obsonarium-backend/internal/handlers/upload_handler"
 	"Obsonarium-backend/internal/handlers/user_addresses"
 	wholesaler_orders "Obsonarium-backend/internal/handlers/wholesaler_orders"
@@ -55,6 +56,7 @@ func (app *application) newRouter() *chi.Mux {
 	r.Post("/api/consumer/otp/verify", consumer_otp.VerifyOTP(app.shared_deps.ConsumerOTPService, &app.shared_deps.AuthService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 	r.Get("/api/shop", retailer_products.GetProducts(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/shop/{id}", retailer_products.GetProduct(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
+	r.Get("/api/shops/nearby", shops.GetNearbyShops(app.shared_deps.ShopsService, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/wholesale", wholesaler_products.GetProducts(&app.shared_deps.WholesalerProductsService, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/wholesale/{id}", wholesaler_products.GetProduct(&app.shared_deps.WholesalerProductsService, app.shared_deps.JSONutils.Writer))
 
