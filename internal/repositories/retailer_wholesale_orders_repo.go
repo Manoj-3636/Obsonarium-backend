@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"Obsonarium-backend/internal/models"
 )
@@ -158,7 +159,7 @@ func (r *RetailerWholesaleOrdersRepository) GetActiveOrdersByWholesalerID(wholes
 // Excludes rejected and delivered items (for active orders page)
 func (r *RetailerWholesaleOrdersRepository) GetActiveOrderItemsByOrderID(orderID int, wholesalerID int) ([]models.RetailerWholesaleOrderItem, error) {
 	query := `
-		SELECT rwoi.id, rwoi.order_id, rwoi.product_id, wp.name as product_name, rwoi.qty, rwoi.unit_price, rwoi.status
+		SELECT rwoi.id, rwoi.order_id, rwoi.product_id, wp.name as product_name, rwoi.qty, rwoi.unit_price, rwoi.status, rwoi.delivery_date
 		FROM retailer_wholesale_order_items rwoi
 		INNER JOIN wholesaler_products wp ON wp.id = rwoi.product_id
 		WHERE rwoi.order_id = $1 AND wp.wholesaler_id = $2 AND rwoi.status NOT IN ('rejected', 'delivered')
@@ -174,6 +175,7 @@ func (r *RetailerWholesaleOrdersRepository) GetActiveOrderItemsByOrderID(orderID
 	var items []models.RetailerWholesaleOrderItem
 	for rows.Next() {
 		var item models.RetailerWholesaleOrderItem
+		var deliveryDate sql.NullTime
 		err := rows.Scan(
 			&item.ID,
 			&item.OrderID,
@@ -182,9 +184,13 @@ func (r *RetailerWholesaleOrdersRepository) GetActiveOrderItemsByOrderID(orderID
 			&item.Qty,
 			&item.UnitPrice,
 			&item.Status,
+			&deliveryDate,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan order item: %w", err)
+		}
+		if deliveryDate.Valid {
+			item.DeliveryDate = &deliveryDate.Time
 		}
 		items = append(items, item)
 	}
@@ -198,20 +204,40 @@ func (r *RetailerWholesaleOrdersRepository) GetActiveOrderItemsByOrderID(orderID
 
 // UpdateOrderItemStatus updates the status of an order item
 // Returns orderID, retailerID, and product name for email notification
-func (r *RetailerWholesaleOrdersRepository) UpdateOrderItemStatus(itemID int, wholesalerID int, status string) (orderID int, retailerID int, productName string, err error) {
+func (r *RetailerWholesaleOrdersRepository) UpdateOrderItemStatus(itemID int, wholesalerID int, status string, deliveryDate *time.Time) (orderID int, retailerID int, productName string, err error) {
 	// Verify the item belongs to a product from this wholesaler and get order info
-	query := `
-		UPDATE retailer_wholesale_order_items rwoi
-		SET status = $1
-		FROM wholesaler_products wp, retailer_wholesale_orders rwo
-		WHERE rwoi.id = $2 
-			AND rwoi.product_id = wp.id 
-			AND wp.wholesaler_id = $3
-			AND rwoi.order_id = rwo.id
-		RETURNING rwoi.order_id, rwo.retailer_id, wp.name
-	`
+	var query string
+	var args []interface{}
+	
+	if deliveryDate != nil && status == "accepted" {
+		// Update status and delivery_date when accepting
+		query = `
+			UPDATE retailer_wholesale_order_items rwoi
+			SET status = $1, delivery_date = $4
+			FROM wholesaler_products wp, retailer_wholesale_orders rwo
+			WHERE rwoi.id = $2 
+				AND rwoi.product_id = wp.id 
+				AND wp.wholesaler_id = $3
+				AND rwoi.order_id = rwo.id
+			RETURNING rwoi.order_id, rwo.retailer_id, wp.name
+		`
+		args = []interface{}{status, itemID, wholesalerID, *deliveryDate}
+	} else {
+		// Update only status
+		query = `
+			UPDATE retailer_wholesale_order_items rwoi
+			SET status = $1
+			FROM wholesaler_products wp, retailer_wholesale_orders rwo
+			WHERE rwoi.id = $2 
+				AND rwoi.product_id = wp.id 
+				AND wp.wholesaler_id = $3
+				AND rwoi.order_id = rwo.id
+			RETURNING rwoi.order_id, rwo.retailer_id, wp.name
+		`
+		args = []interface{}{status, itemID, wholesalerID}
+	}
 
-	err = r.DB.QueryRow(query, status, itemID, wholesalerID).Scan(&orderID, &retailerID, &productName)
+	err = r.DB.QueryRow(query, args...).Scan(&orderID, &retailerID, &productName)
 	if err == sql.ErrNoRows {
 		return 0, 0, "", fmt.Errorf("order item not found or does not belong to this wholesaler")
 	}
@@ -252,7 +278,7 @@ func (r *RetailerWholesaleOrdersRepository) UpdateOrderItemStatus(itemID int, wh
 // Includes all statuses (for history page)
 func (r *RetailerWholesaleOrdersRepository) GetOrderItemsByOrderID(orderID int, wholesalerID int) ([]models.RetailerWholesaleOrderItem, error) {
 	query := `
-		SELECT rwoi.id, rwoi.order_id, rwoi.product_id, wp.name as product_name, rwoi.qty, rwoi.unit_price, rwoi.status
+		SELECT rwoi.id, rwoi.order_id, rwoi.product_id, wp.name as product_name, rwoi.qty, rwoi.unit_price, rwoi.status, rwoi.delivery_date
 		FROM retailer_wholesale_order_items rwoi
 		INNER JOIN wholesaler_products wp ON wp.id = rwoi.product_id
 		WHERE rwoi.order_id = $1 AND wp.wholesaler_id = $2
@@ -268,6 +294,7 @@ func (r *RetailerWholesaleOrdersRepository) GetOrderItemsByOrderID(orderID int, 
 	var items []models.RetailerWholesaleOrderItem
 	for rows.Next() {
 		var item models.RetailerWholesaleOrderItem
+		var deliveryDate sql.NullTime
 		err := rows.Scan(
 			&item.ID,
 			&item.OrderID,
@@ -276,9 +303,13 @@ func (r *RetailerWholesaleOrdersRepository) GetOrderItemsByOrderID(orderID int, 
 			&item.Qty,
 			&item.UnitPrice,
 			&item.Status,
+			&deliveryDate,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan order item: %w", err)
+		}
+		if deliveryDate.Valid {
+			item.DeliveryDate = &deliveryDate.Time
 		}
 		items = append(items, item)
 	}

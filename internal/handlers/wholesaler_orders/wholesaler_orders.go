@@ -7,6 +7,7 @@ import (
 	"Obsonarium-backend/internal/utils/jsonutils"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi"
 )
@@ -115,7 +116,8 @@ func UpdateOrderItemStatus(
 		}
 
 		var req struct {
-			Status string `json:"status"`
+			Status       string `json:"status"`
+			DeliveryDate string `json:"delivery_date,omitempty"`
 		}
 		if err := readJSON(w, r, &req); err != nil {
 			writeJSON(w, jsonutils.Envelope{"error": err.Error()}, http.StatusBadRequest, nil)
@@ -127,7 +129,17 @@ func UpdateOrderItemStatus(
 			return
 		}
 
-		err = ordersService.UpdateOrderItemStatus(itemID, wholesaler.Id, req.Status)
+		var deliveryDate *time.Time
+		if req.DeliveryDate != "" && req.Status == "accepted" {
+			parsedDate, err := time.Parse("2006-01-02", req.DeliveryDate)
+			if err != nil {
+				writeJSON(w, jsonutils.Envelope{"error": "Invalid delivery date format. Use YYYY-MM-DD"}, http.StatusBadRequest, nil)
+				return
+			}
+			deliveryDate = &parsedDate
+		}
+
+		err = ordersService.UpdateOrderItemStatus(itemID, wholesaler.Id, req.Status, deliveryDate)
 		if err != nil {
 			writeJSON(w, jsonutils.Envelope{"error": err.Error()}, http.StatusBadRequest, nil)
 			return

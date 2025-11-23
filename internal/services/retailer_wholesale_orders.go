@@ -5,6 +5,8 @@ import (
 	"Obsonarium-backend/internal/repositories"
 	"errors"
 	"fmt"
+	"net/url"
+	"time"
 )
 
 type RetailerWholesaleOrdersService struct {
@@ -49,7 +51,7 @@ func (s *RetailerWholesaleOrdersService) GetOrdersByRetailerID(retailerID int) (
 }
 
 // UpdateOrderItemStatus updates the status of an order item
-func (s *RetailerWholesaleOrdersService) UpdateOrderItemStatus(itemID int, wholesalerID int, status string) error {
+func (s *RetailerWholesaleOrdersService) UpdateOrderItemStatus(itemID int, wholesalerID int, status string, deliveryDate *time.Time) error {
 	// Validate status - wholesalers cannot set items to "pending" as it's the initial state only
 	validStatuses := map[string]bool{
 		"accepted":  true,
@@ -67,7 +69,7 @@ func (s *RetailerWholesaleOrdersService) UpdateOrderItemStatus(itemID int, whole
 		return errors.New("cannot set status to pending - it is the initial state only")
 	}
 
-	orderID, retailerID, productName, err := s.OrdersRepo.UpdateOrderItemStatus(itemID, wholesalerID, status)
+	orderID, retailerID, productName, err := s.OrdersRepo.UpdateOrderItemStatus(itemID, wholesalerID, status, deliveryDate)
 	if err != nil {
 		return fmt.Errorf("failed to update order item status: %w", err)
 	}
@@ -91,7 +93,32 @@ func (s *RetailerWholesaleOrdersService) UpdateOrderItemStatus(itemID int, whole
 			}
 
 			subject := fmt.Sprintf("Order #%d Status Update", orderID)
-			body := fmt.Sprintf("Dear retailer,\n\nYour wholesale order #%d has been updated.\n\nProduct: %s\nNew Status: %s\n\nThank you for your business!", orderID, productName, statusDisplay)
+			body := fmt.Sprintf("Dear retailer,\n\nYour wholesale order #%d has been updated.\n\nProduct: %s\nNew Status: %s", orderID, productName, statusDisplay)
+
+			// Add delivery date and calendar link if order is accepted with delivery date
+			if status == "accepted" && deliveryDate != nil {
+				formattedDate := deliveryDate.Format("Monday, January 2, 2006")
+				
+				// Generate Google Calendar URL
+				startDate := time.Date(deliveryDate.Year(), deliveryDate.Month(), deliveryDate.Day(), 10, 0, 0, 0, deliveryDate.Location())
+				endDate := startDate.Add(1 * time.Hour)
+				
+				formatDate := func(t time.Time) string {
+					return t.UTC().Format("20060102T150405Z")
+				}
+				
+				dates := fmt.Sprintf("%s/%s", formatDate(startDate), formatDate(endDate))
+				title := "Order Delivery"
+				details := fmt.Sprintf("Your wholesale order #%d will be delivered on %s", orderID, formattedDate)
+				
+				// Properly encode URL parameters
+				calendarURL := fmt.Sprintf("https://calendar.google.com/calendar/render?action=TEMPLATE&text=%s&dates=%s&details=%s",
+					url.QueryEscape(title), dates, url.QueryEscape(details))
+				
+				body += fmt.Sprintf("\n\nTentative Delivery Date: %s\n\nAdd to Calendar: %s", formattedDate, calendarURL)
+			}
+
+			body += "\n\nThank you for your business!"
 
 			err = s.EmailService.SendEmail(retailer.Email, subject, body)
 			if err != nil {
