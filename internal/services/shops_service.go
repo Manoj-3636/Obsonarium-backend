@@ -10,7 +10,7 @@ import (
 type ShopWithDistance struct {
 	Retailer models.Retailer `json:"retailer"`
 	Distance float64         `json:"distance"` // in km
-	ETA      float64         `json:"eta"`     // in minutes
+	ETA      float64         `json:"eta"`      // in minutes
 }
 
 type ShopsService struct {
@@ -47,13 +47,14 @@ func (s *ShopsService) GetNearbyShops(lat, lon, radiusKm float64) ([]ShopWithDis
 
 		// Calculate ETA using OSRM (driving route)
 		etaMinutes := 0.0
-		_, eta, err := s.locationService.Distance(lat, lon, *retailer.Latitude, *retailer.Longitude)
+		osrmDistance, eta, err := s.locationService.Distance(lat, lon, *retailer.Latitude, *retailer.Longitude)
 		if err != nil {
 			// Log warning if OSRM distance calculation fails, but continue with Haversine distance
 			log.Printf("WARNING: Failed to calculate OSRM distance/ETA for retailer ID %d: %v. Using Haversine distance only.",
 				retailer.Id, err)
 		} else {
 			etaMinutes = eta
+			distanceKm = osrmDistance // Use driving distance if available
 		}
 
 		shops = append(shops, ShopWithDistance{
@@ -65,5 +66,3 @@ func (s *ShopsService) GetNearbyShops(lat, lon, radiusKm float64) ([]ShopWithDis
 
 	return shops, nil
 }
-
-
