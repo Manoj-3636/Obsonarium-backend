@@ -19,11 +19,12 @@ type RetailerWholesaleOrder struct {
 }
 
 type RetailerWholesaleOrderItem struct {
-	ID        int     `json:"id" db:"id"`
-	OrderID   int     `json:"order_id" db:"order_id"`
-	ProductID int     `json:"product_id" db:"product_id"`
-	Qty       int     `json:"qty" db:"qty"`
-	UnitPrice float64 `json:"unit_price" db:"unit_price"`
-	Status    string  `json:"status" db:"status"`
+	ID          int     `json:"id" db:"id"`
+	OrderID     int     `json:"order_id" db:"order_id"`
+	ProductID   int     `json:"product_id" db:"product_id"`
+	ProductName string  `json:"product_name,omitempty" db:"product_name"`
+	Qty         int     `json:"qty" db:"qty"`
+	UnitPrice   float64 `json:"unit_price" db:"unit_price"`
+	Status      string  `json:"status" db:"status"`
 }
 

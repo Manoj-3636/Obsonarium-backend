@@ -162,7 +162,7 @@ func (r *ConsumerOrdersRepository) GetActiveOrdersByRetailerID(retailerID int) (
 // Excludes rejected and delivered items (for active orders page)
 func (r *ConsumerOrdersRepository) GetActiveOrderItemsByOrderID(orderID int, retailerID int) ([]models.ConsumerOrderItem, error) {
 	query := `
-		SELECT coi.id, coi.order_id, coi.product_id, coi.qty, coi.unit_price, coi.status
+		SELECT coi.id, coi.order_id, coi.product_id, rp.name as product_name, coi.qty, coi.unit_price, coi.status
 		FROM consumer_order_items coi
 		INNER JOIN retailer_products rp ON rp.id = coi.product_id
 		WHERE coi.order_id = $1 AND rp.retailer_id = $2 AND coi.status NOT IN ('rejected', 'delivered')
@@ -182,6 +182,7 @@ func (r *ConsumerOrdersRepository) GetActiveOrderItemsByOrderID(orderID int, ret
 			&item.ID,
 			&item.OrderID,
 			&item.ProductID,
+			&item.ProductName,
 			&item.Qty,
 			&item.UnitPrice,
 			&item.Status,
@@ -255,7 +256,7 @@ func (r *ConsumerOrdersRepository) UpdateOrderItemStatus(itemID int, retailerID 
 // Includes all statuses (for history page)
 func (r *ConsumerOrdersRepository) GetOrderItemsByOrderID(orderID int, retailerID int) ([]models.ConsumerOrderItem, error) {
 	query := `
-		SELECT coi.id, coi.order_id, coi.product_id, coi.qty, coi.unit_price, coi.status
+		SELECT coi.id, coi.order_id, coi.product_id, rp.name as product_name, coi.qty, coi.unit_price, coi.status
 		FROM consumer_order_items coi
 		INNER JOIN retailer_products rp ON rp.id = coi.product_id
 		WHERE coi.order_id = $1 AND rp.retailer_id = $2
@@ -275,6 +276,7 @@ func (r *ConsumerOrdersRepository) GetOrderItemsByOrderID(orderID int, retailerI
 			&item.ID,
 			&item.OrderID,
 			&item.ProductID,
+			&item.ProductName,
 			&item.Qty,
 			&item.UnitPrice,
 			&item.Status,
@@ -464,8 +466,9 @@ func (r *ConsumerOrdersRepository) GetOrdersByConsumerID(consumerID int) ([]mode
 	// Get all order items for each order
 	for i := range orders {
 		itemsQuery := `
-			SELECT coi.id, coi.order_id, coi.product_id, coi.qty, coi.unit_price, coi.status
+			SELECT coi.id, coi.order_id, coi.product_id, rp.name as product_name, coi.qty, coi.unit_price, coi.status
 			FROM consumer_order_items coi
+			INNER JOIN retailer_products rp ON rp.id = coi.product_id
 			WHERE coi.order_id = $1
 			ORDER BY coi.id
 		`
@@ -481,6 +484,7 @@ func (r *ConsumerOrdersRepository) GetOrdersByConsumerID(consumerID int) ([]mode
 				&item.ID,
 				&item.OrderID,
 				&item.ProductID,
+				&item.ProductName,
 				&item.Qty,
 				&item.UnitPrice,
 				&item.Status,

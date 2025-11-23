@@ -158,7 +158,7 @@ func (r *RetailerWholesaleOrdersRepository) GetActiveOrdersByWholesalerID(wholes
 // Excludes rejected and delivered items (for active orders page)
 func (r *RetailerWholesaleOrdersRepository) GetActiveOrderItemsByOrderID(orderID int, wholesalerID int) ([]models.RetailerWholesaleOrderItem, error) {
 	query := `
-		SELECT rwoi.id, rwoi.order_id, rwoi.product_id, rwoi.qty, rwoi.unit_price, rwoi.status
+		SELECT rwoi.id, rwoi.order_id, rwoi.product_id, wp.name as product_name, rwoi.qty, rwoi.unit_price, rwoi.status
 		FROM retailer_wholesale_order_items rwoi
 		INNER JOIN wholesaler_products wp ON wp.id = rwoi.product_id
 		WHERE rwoi.order_id = $1 AND wp.wholesaler_id = $2 AND rwoi.status NOT IN ('rejected', 'delivered')
@@ -178,6 +178,7 @@ func (r *RetailerWholesaleOrdersRepository) GetActiveOrderItemsByOrderID(orderID
 			&item.ID,
 			&item.OrderID,
 			&item.ProductID,
+			&item.ProductName,
 			&item.Qty,
 			&item.UnitPrice,
 			&item.Status,
@@ -251,7 +252,7 @@ func (r *RetailerWholesaleOrdersRepository) UpdateOrderItemStatus(itemID int, wh
 // Includes all statuses (for history page)
 func (r *RetailerWholesaleOrdersRepository) GetOrderItemsByOrderID(orderID int, wholesalerID int) ([]models.RetailerWholesaleOrderItem, error) {
 	query := `
-		SELECT rwoi.id, rwoi.order_id, rwoi.product_id, rwoi.qty, rwoi.unit_price, rwoi.status
+		SELECT rwoi.id, rwoi.order_id, rwoi.product_id, wp.name as product_name, rwoi.qty, rwoi.unit_price, rwoi.status
 		FROM retailer_wholesale_order_items rwoi
 		INNER JOIN wholesaler_products wp ON wp.id = rwoi.product_id
 		WHERE rwoi.order_id = $1 AND wp.wholesaler_id = $2
@@ -271,6 +272,7 @@ func (r *RetailerWholesaleOrdersRepository) GetOrderItemsByOrderID(orderID int, 
 			&item.ID,
 			&item.OrderID,
 			&item.ProductID,
+			&item.ProductName,
 			&item.Qty,
 			&item.UnitPrice,
 			&item.Status,
@@ -411,10 +413,11 @@ func (r *RetailerWholesaleOrdersRepository) GetOrdersByRetailerID(retailerID int
 
 		// Get all items for this order
 		itemsQuery := `
-			SELECT id, order_id, product_id, qty, unit_price, status
-			FROM retailer_wholesale_order_items
-			WHERE order_id = $1
-			ORDER BY id
+			SELECT rwoi.id, rwoi.order_id, rwoi.product_id, wp.name as product_name, rwoi.qty, rwoi.unit_price, rwoi.status
+			FROM retailer_wholesale_order_items rwoi
+			INNER JOIN wholesaler_products wp ON wp.id = rwoi.product_id
+			WHERE rwoi.order_id = $1
+			ORDER BY rwoi.id
 		`
 		itemRows, err := r.DB.Query(itemsQuery, order.ID)
 		if err == nil {
@@ -425,6 +428,7 @@ func (r *RetailerWholesaleOrdersRepository) GetOrdersByRetailerID(retailerID int
 					&item.ID,
 					&item.OrderID,
 					&item.ProductID,
+					&item.ProductName,
 					&item.Qty,
 					&item.UnitPrice,
 					&item.Status,
