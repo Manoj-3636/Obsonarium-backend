@@ -5,6 +5,7 @@ import (
 	"Obsonarium-backend/internal/handlers/cart"
 	"Obsonarium-backend/internal/handlers/checkout"
 	consumer_orders "Obsonarium-backend/internal/handlers/consumer_orders"
+	consumer_otp "Obsonarium-backend/internal/handlers/consumer_otp"
 	"Obsonarium-backend/internal/handlers/healthcheck"
 	"Obsonarium-backend/internal/handlers/product_handler"
 	"Obsonarium-backend/internal/handlers/product_queries"
@@ -48,6 +49,10 @@ func (app *application) newRouter() *chi.Mux {
 	r.Get("/api/auth/{provider}/callback", auth.NewAuthCallback(app.shared_deps.logger, &app.shared_deps.AuthService, &app.shared_deps.RetailersService, &app.shared_deps.WholesalersService))
 	r.Get("/api/auth/{provider}", auth.AuthProvider)
 	r.Get("/api/logout/{provider}", auth.AuthLogout)
+	
+	// Consumer OTP routes
+	r.Post("/api/consumer/otp/request", consumer_otp.RequestOTP(app.shared_deps.ConsumerOTPService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
+	r.Post("/api/consumer/otp/verify", consumer_otp.VerifyOTP(app.shared_deps.ConsumerOTPService, &app.shared_deps.AuthService, app.shared_deps.JSONutils.Writer, app.shared_deps.JSONutils.Reader))
 	r.Get("/api/shop", retailer_products.GetProducts(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/shop/{id}", retailer_products.GetProduct(&app.shared_deps.RetailerProductsService, app.shared_deps.JSONutils.Writer))
 	r.Get("/api/wholesale", wholesaler_products.GetProducts(&app.shared_deps.WholesalerProductsService, app.shared_deps.JSONutils.Writer))
