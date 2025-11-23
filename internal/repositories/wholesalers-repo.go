@@ -25,7 +25,7 @@ func NewWholesalersRepo(db *sql.DB) *WholesalersRepo {
 
 func (repo *WholesalersRepo) GetWholesalerByID(id int) (*models.Wholesaler, error) {
 	query := `
-		SELECT id, name, business_name, email, phone, address, latitude, longitude
+		SELECT id, name, business_name, email, phone, address, street_address, city, state, postal_code, country, latitude, longitude
 		FROM wholesalers
 		WHERE id = $1`
 
@@ -43,6 +43,11 @@ func (repo *WholesalersRepo) GetWholesalerByID(id int) (*models.Wholesaler, erro
 		&wholesaler.Email,
 		&wholesaler.Phone,
 		&wholesaler.Address,
+		&wholesaler.StreetAddress,
+		&wholesaler.City,
+		&wholesaler.State,
+		&wholesaler.PostalCode,
+		&wholesaler.Country,
 		&latitude,
 		&longitude,
 	)
@@ -112,7 +117,7 @@ func (repo *WholesalersRepo) UpsertWholesaler(wholesaler *models.Wholesaler) err
 
 func (repo *WholesalersRepo) GetWholesalerByEmail(email string) (*models.Wholesaler, error) {
 	query := `
-		SELECT id, name, business_name, email, phone, address, latitude, longitude
+		SELECT id, name, business_name, email, phone, address, street_address, city, state, postal_code, country, latitude, longitude
 		FROM wholesalers
 		WHERE email = $1`
 
@@ -132,6 +137,11 @@ func (repo *WholesalersRepo) GetWholesalerByEmail(email string) (*models.Wholesa
 		&wholesaler.Email,
 		&phone,
 		&address,
+		&wholesaler.StreetAddress,
+		&wholesaler.City,
+		&wholesaler.State,
+		&wholesaler.PostalCode,
+		&wholesaler.Country,
 		&latitude,
 		&longitude,
 	)
@@ -165,8 +175,8 @@ func (repo *WholesalersRepo) GetWholesalerByEmail(email string) (*models.Wholesa
 func (repo *WholesalersRepo) UpdateWholesaler(wholesaler *models.Wholesaler) error {
 	query := `
 		UPDATE wholesalers
-		SET business_name = $1, phone = $2, address = $3, latitude = $4, longitude = $5
-		WHERE email = $6
+		SET business_name = $1, phone = $2, address = $3, street_address = $4, city = $5, state = $6, postal_code = $7, country = $8, latitude = $9, longitude = $10
+		WHERE email = $11
 		RETURNING id`
 
 	// Note: name is not updated here - it only comes from Google OAuth during login
@@ -176,6 +186,11 @@ func (repo *WholesalersRepo) UpdateWholesaler(wholesaler *models.Wholesaler) err
 		wholesaler.BusinessName,
 		wholesaler.Phone,
 		wholesaler.Address,
+		wholesaler.StreetAddress,
+		wholesaler.City,
+		wholesaler.State,
+		wholesaler.PostalCode,
+		wholesaler.Country,
 		wholesaler.Latitude,
 		wholesaler.Longitude,
 		wholesaler.Email,
@@ -190,4 +205,3 @@ func (repo *WholesalersRepo) UpdateWholesaler(wholesaler *models.Wholesaler) err
 
 	return nil
 }
-

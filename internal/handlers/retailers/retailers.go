@@ -71,11 +71,16 @@ func GetCurrentRetailer(retailersService *services.RetailersService, writeJSON j
 }
 
 type UpdateRetailerRequest struct {
-	BusinessName string   `json:"business_name"`
-	Phone        string   `json:"phone"`
-	Address      string   `json:"address"`
-	Latitude     *float64 `json:"latitude,omitempty"`
-	Longitude    *float64 `json:"longitude,omitempty"`
+	BusinessName  string   `json:"business_name"`
+	Phone         string   `json:"phone"`
+	Address       string   `json:"address"`
+	StreetAddress string   `json:"street_address"`
+	City          string   `json:"city"`
+	State         string   `json:"state"`
+	PostalCode    string   `json:"postal_code"`
+	Country       string   `json:"country"`
+	Latitude      *float64 `json:"latitude,omitempty"`
+	Longitude     *float64 `json:"longitude,omitempty"`
 }
 
 // UpdateCurrentRetailer updates the current authenticated retailer's profile (onboarding)
@@ -98,6 +103,11 @@ func UpdateCurrentRetailer(retailersService *services.RetailersService, writeJSO
 		req.BusinessName = strings.TrimSpace(req.BusinessName)
 		req.Phone = strings.TrimSpace(req.Phone)
 		req.Address = strings.TrimSpace(req.Address)
+		req.StreetAddress = strings.TrimSpace(req.StreetAddress)
+		req.City = strings.TrimSpace(req.City)
+		req.State = strings.TrimSpace(req.State)
+		req.PostalCode = strings.TrimSpace(req.PostalCode)
+		req.Country = strings.TrimSpace(req.Country)
 
 		if req.BusinessName == "" {
 			writeJSON(w, jsonutils.Envelope{"error": "Business name is required"}, http.StatusBadRequest, nil)
@@ -145,7 +155,7 @@ func UpdateCurrentRetailer(retailersService *services.RetailersService, writeJSO
 		}
 
 		// Name comes from Google OAuth, not from user input
-		retailer, err := retailersService.UpdateRetailer(email, req.BusinessName, req.Phone, req.Address, req.Latitude, req.Longitude)
+		retailer, err := retailersService.UpdateRetailer(email, req.BusinessName, req.Phone, req.Address, req.StreetAddress, req.City, req.State, req.PostalCode, req.Country, req.Latitude, req.Longitude)
 		if err != nil {
 			if errors.Is(err, repositories.ErrRetailerNotFound) {
 				writeJSON(w, jsonutils.Envelope{"error": "Retailer not found"}, http.StatusNotFound, nil)

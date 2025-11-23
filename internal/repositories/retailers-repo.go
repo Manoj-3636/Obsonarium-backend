@@ -26,7 +26,7 @@ func NewRetailersRepo(db *sql.DB) *RetailersRepo {
 
 func (repo *RetailersRepo) GetRetailerByID(id int) (*models.Retailer, error) {
 	query := `
-		SELECT id, name, business_name, email, phone, address, latitude, longitude
+		SELECT id, name, business_name, email, phone, address, street_address, city, state, postal_code, country, latitude, longitude
 		FROM retailers
 		WHERE id = $1`
 
@@ -44,6 +44,11 @@ func (repo *RetailersRepo) GetRetailerByID(id int) (*models.Retailer, error) {
 		&retailer.Email,
 		&retailer.Phone,
 		&retailer.Address,
+		&retailer.StreetAddress,
+		&retailer.City,
+		&retailer.State,
+		&retailer.PostalCode,
+		&retailer.Country,
 		&latitude,
 		&longitude,
 	)
@@ -113,7 +118,7 @@ func (repo *RetailersRepo) UpsertRetailer(retailer *models.Retailer) error {
 
 func (repo *RetailersRepo) GetRetailerByEmail(email string) (*models.Retailer, error) {
 	query := `
-		SELECT id, name, business_name, email, phone, address, latitude, longitude
+		SELECT id, name, business_name, email, phone, address, street_address, city, state, postal_code, country, latitude, longitude
 		FROM retailers
 		WHERE email = $1`
 
@@ -133,6 +138,11 @@ func (repo *RetailersRepo) GetRetailerByEmail(email string) (*models.Retailer, e
 		&retailer.Email,
 		&phone,
 		&address,
+		&retailer.StreetAddress,
+		&retailer.City,
+		&retailer.State,
+		&retailer.PostalCode,
+		&retailer.Country,
 		&latitude,
 		&longitude,
 	)
@@ -166,8 +176,8 @@ func (repo *RetailersRepo) GetRetailerByEmail(email string) (*models.Retailer, e
 func (repo *RetailersRepo) UpdateRetailer(retailer *models.Retailer) error {
 	query := `
 		UPDATE retailers
-		SET business_name = $1, phone = $2, address = $3, latitude = $4, longitude = $5
-		WHERE email = $6
+		SET business_name = $1, phone = $2, address = $3, street_address = $4, city = $5, state = $6, postal_code = $7, country = $8, latitude = $9, longitude = $10
+		WHERE email = $11
 		RETURNING id`
 
 	// Note: name is not updated here - it only comes from Google OAuth during login
@@ -177,6 +187,11 @@ func (repo *RetailersRepo) UpdateRetailer(retailer *models.Retailer) error {
 		retailer.BusinessName,
 		retailer.Phone,
 		retailer.Address,
+		retailer.StreetAddress,
+		retailer.City,
+		retailer.State,
+		retailer.PostalCode,
+		retailer.Country,
 		retailer.Latitude,
 		retailer.Longitude,
 		retailer.Email,
@@ -198,7 +213,7 @@ func (repo *RetailersRepo) GetNearbyRetailers(lat, lon, radiusKm float64) ([]mod
 	// Where R = 6371 km (Earth's radius)
 	// We'll use a simpler bounding box approach first, then filter by distance
 	query := `
-		SELECT id, name, business_name, email, phone, address, latitude, longitude
+		SELECT id, name, business_name, email, phone, address, street_address, city, state, postal_code, country, latitude, longitude
 		FROM retailers
 		WHERE latitude IS NOT NULL 
 			AND longitude IS NOT NULL
@@ -241,6 +256,11 @@ func (repo *RetailersRepo) GetNearbyRetailers(lat, lon, radiusKm float64) ([]mod
 			&retailer.Email,
 			&phone,
 			&address,
+			&retailer.StreetAddress,
+			&retailer.City,
+			&retailer.State,
+			&retailer.PostalCode,
+			&retailer.Country,
 			&latitude,
 			&longitude,
 		)

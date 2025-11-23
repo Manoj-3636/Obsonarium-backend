@@ -4,6 +4,7 @@ import (
 	"Obsonarium-backend/internal/models"
 	"Obsonarium-backend/internal/repositories"
 	"fmt"
+	"log"
 )
 
 type ShopWithDistance struct {
@@ -35,6 +36,9 @@ func (s *ShopsService) GetNearbyShops(lat, lon, radiusKm float64) ([]ShopWithDis
 	shops := make([]ShopWithDistance, 0, len(retailers))
 	for _, retailer := range retailers {
 		if retailer.Latitude == nil || retailer.Longitude == nil {
+			// Log warning when retailer has no coordinates
+			log.Printf("WARNING: Skipping retailer ID %d (name: %s, email: %s) - missing latitude/longitude coordinates. Address: %s",
+				retailer.Id, retailer.Name, retailer.Email, retailer.Address)
 			continue // Skip retailers without coordinates
 		}
 
@@ -44,7 +48,11 @@ func (s *ShopsService) GetNearbyShops(lat, lon, radiusKm float64) ([]ShopWithDis
 		// Calculate ETA using OSRM (driving route)
 		etaMinutes := 0.0
 		_, eta, err := s.locationService.Distance(lat, lon, *retailer.Latitude, *retailer.Longitude)
-		if err == nil {
+		if err != nil {
+			// Log warning if OSRM distance calculation fails, but continue with Haversine distance
+			log.Printf("WARNING: Failed to calculate OSRM distance/ETA for retailer ID %d: %v. Using Haversine distance only.",
+				retailer.Id, err)
+		} else {
 			etaMinutes = eta
 		}
 
